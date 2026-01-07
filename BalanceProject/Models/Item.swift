@@ -2,8 +2,6 @@
 //  Item.swift
 //  BalanceProject
 //
-//  Created by Edward Zhou.
-//
 
 import Foundation
 import SwiftData

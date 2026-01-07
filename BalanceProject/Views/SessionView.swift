@@ -1,14 +1,12 @@
 //
-//  ContentView.swift
+//  SessionView.swift
 //  BalanceProject
-//
-//  Created by Edward Zhou.
 //
 
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
+struct SessionView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
 
@@ -56,6 +54,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    SessionView()
         .modelContainer(for: Item.self, inMemory: true)
 }

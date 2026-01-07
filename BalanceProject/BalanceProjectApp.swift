@@ -2,8 +2,6 @@
 //  BalanceProjectApp.swift
 //  BalanceProject
 //
-//  Created by Edward Zhou.
-//
 
 import SwiftUI
 import SwiftData
@@ -25,7 +23,7 @@ struct BalanceProjectApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SessionView()
         }
         .modelContainer(sharedModelContainer)
     }
