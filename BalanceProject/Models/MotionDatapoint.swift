@@ -23,20 +23,20 @@ struct MotionDatapoint: Codable, Identifiable {
     let accelerationY: Double
     let accelerationZ: Double
 
-    init(motion: CMDeviceMotion) {
-        self.id = UUID()
-        self.timestamp = Date()
+    init(_ motion: CMDeviceMotion) {
+        id = UUID()
+        timestamp = Date()
 
-        self.pitch = motion.attitude.pitch
-        self.roll = motion.attitude.roll
-        self.yaw = motion.attitude.yaw
+        pitch = motion.attitude.pitch
+        roll = motion.attitude.roll
+        yaw = motion.attitude.yaw
 
-        self.rotationRateX = motion.rotationRate.x
-        self.rotationRateY = motion.rotationRate.y
-        self.rotationRateZ = motion.rotationRate.z
+        rotationRateX = motion.rotationRate.x
+        rotationRateY = motion.rotationRate.y
+        rotationRateZ = motion.rotationRate.z
 
-        self.accelerationX = motion.userAcceleration.x
-        self.accelerationY = motion.userAcceleration.y
-        self.accelerationZ = motion.userAcceleration.z
+        accelerationX = motion.userAcceleration.x
+        accelerationY = motion.userAcceleration.y
+        accelerationZ = motion.userAcceleration.z
     }
 }

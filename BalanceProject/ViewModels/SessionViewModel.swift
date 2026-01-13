@@ -10,6 +10,7 @@ import Observation
 @Observable
 @MainActor
 class SessionViewModel {
+    var currentSession: MotionSession?
     var currentData: MotionDatapoint?
     var isRecording: Bool = false
     
@@ -19,8 +20,9 @@ class SessionViewModel {
         motionService.onUpdate = { [weak self] data in
             guard let self else { return }
             
-            let datapoint = MotionDatapoint(motion: data)
+            let datapoint = MotionDatapoint(data)
             
+            self.currentSession?.addDatapoint(datapoint)
             self.currentData = datapoint
         }
     }
@@ -28,13 +30,20 @@ class SessionViewModel {
     func startSession() {
         guard !isRecording else { return }
         
+        currentSession = MotionSession()
         motionService.startTracking()
+
         isRecording = true
     }
-    func endSession() {
-        guard isRecording else { return }
+    func endSession() -> MotionSession? {
+        guard isRecording, var session = currentSession else { return nil }
         
         motionService.stopTracking()
+        session.end()
+        
+        currentSession = nil
         isRecording = false
+        
+        return session
     }
 }
