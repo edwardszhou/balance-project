@@ -29,7 +29,7 @@ struct SessionView: View {
             Spacer()
             VStack(spacing: 24) {
                 Text(sessionViewModel.isRecording ? "Recording…" : "Idle")
-                    .font(.headline)
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(sessionViewModel.isRecording ? .red : .secondary)
                 
                 if let currentData = sessionViewModel.currentData {
@@ -46,8 +46,6 @@ struct SessionView: View {
                         Text("Acceleration Y: \(currentData.accelerationY, specifier: "%.3f")")
                         Text("Acceleration Z: \(currentData.accelerationZ, specifier: "%.3f")")
                     }
-                } else {
-                    Text("No motion data.")
                 }
             }
             Spacer()
