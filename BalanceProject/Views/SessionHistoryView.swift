@@ -27,17 +27,30 @@ struct SessionHistoryView: View {
                     }
                     .padding(.vertical, 4)
                     Spacer()
-                    Button {
-                        viewModel.prepareExport(session)
-                    } label: {
-                        if viewModel.isPreparingExport {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "square.and.arrow.up")
+                    HStack(spacing: 8) {
+                        Button {
+                            viewModel.prepareExport(session, type: .json)
+                        } label: {
+                            if viewModel.isPreparingExport {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "square.and.arrow.up")
+                            }
                         }
+                        .buttonStyle(.bordered)
+                        .disabled(viewModel.isPreparingExport)
+                        Button {
+                            viewModel.prepareExport(session, type: .graph)
+                        } label: {
+                            if viewModel.isPreparingExport {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "chart.xyaxis.line")
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(viewModel.isPreparingExport)
                     }
-                    .buttonStyle(.bordered)
-                    .disabled(viewModel.isPreparingExport)
                 }
             }
         }

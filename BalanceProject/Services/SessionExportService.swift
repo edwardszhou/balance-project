@@ -3,9 +3,34 @@
 //  BalanceProject
 //
 
-import Foundation
+import SwiftUI
 
 class SessionExportService {
+    
+    func exportGraph(_ session: MotionSession) -> URL? {
+        let view = MotionGraphView(session: session)
+            .frame(width: 1200, height: 900)
+
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 2
+
+        let fileUrl = getFileUrl(session.id, fileType: "png")
+        
+        guard let image = renderer.uiImage,
+              let data = image.pngData() else {
+            print("Failed to export graph.")
+            return nil;
+        }
+
+        do {
+            try data.write(to: fileUrl, options: .atomic)
+            return fileUrl
+        } catch {
+            print("Failed to export graph: \(error)")
+            return nil
+        }
+
+    }
     
     func exportToJSON(_ session: MotionSession) -> URL? {
         guard session.endDate != nil else {
@@ -19,7 +44,7 @@ class SessionExportService {
         
         do {
             let data = try encoder.encode(session)
-            let fileUrl = getFileUrl(session.id)
+            let fileUrl = getFileUrl(session.id, fileType: "json")
             try data.write(to: fileUrl, options: .atomic)
             
             return fileUrl
@@ -29,11 +54,11 @@ class SessionExportService {
         }
     }
     
-    private func getFileUrl(_ sessionID: UUID) -> URL {
+    private func getFileUrl(_ sessionID: UUID, fileType: String) -> URL {
         let directory = FileManager.default.temporaryDirectory
         let filename = "motion-session-\(sessionID.uuidString)"
         return directory
             .appending(path: filename)
-            .appendingPathExtension("json")
+            .appendingPathExtension(fileType)
     }
 }

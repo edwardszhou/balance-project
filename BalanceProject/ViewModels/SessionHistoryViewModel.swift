@@ -18,16 +18,27 @@ class SessionHistoryViewModel {
         sessions.insert(session, at: 0)
     }
     
-    func prepareExport(_ session: MotionSession) {
+    enum SessionExportType {
+        case graph
+        case json
+    }
+    
+    func prepareExport(_ session: MotionSession, type: SessionExportType = .json) {
         isPreparingExport = true
         
         // Run on a background thread so the UI doesn't freeze
         DispatchQueue.global(qos: .userInitiated).async {
-            if let url = self.exportService.exportToJSON(session) {
-                DispatchQueue.main.async {
-                    self.exportURL = url
-                    self.isPreparingExport = false
-                }
+            let url: URL?
+            switch type {
+            case .json:
+                url = self.exportService.exportToJSON(session)
+            case .graph:
+                url = self.exportService.exportGraph(session)
+            }
+
+            DispatchQueue.main.async {
+                self.exportURL = url
+                self.isPreparingExport = false
             }
         }
     }
