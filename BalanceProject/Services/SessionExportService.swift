@@ -19,7 +19,7 @@ class SessionExportService {
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2
 
-        let fileUrl = getFileUrl(session.id, fileType: "png")
+        let fileUrl = getFileUrl(session, fileType: "png")
         
         guard let image = renderer.uiImage,
               let data = image.pngData() else {
@@ -49,7 +49,7 @@ class SessionExportService {
         
         do {
             let data = try encoder.encode(session)
-            let fileUrl = getFileUrl(session.id, fileType: "json")
+            let fileUrl = getFileUrl(session, fileType: "json")
             try data.write(to: fileUrl, options: .atomic)
             
             return fileUrl
@@ -70,7 +70,7 @@ class SessionExportService {
             csv.append("\n")
         }
 
-        let fileURL = getFileUrl(session.id, fileType: "csv")
+        let fileURL = getFileUrl(session, fileType: "csv")
 
         do {
             try csv.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -82,9 +82,15 @@ class SessionExportService {
     }
 
     
-    private func getFileUrl(_ sessionID: UUID, fileType: String) -> URL {
+    private func getFileUrl(_ session: MotionSession, fileType: String) -> URL {
         let directory = FileManager.default.temporaryDirectory
-        let filename = "motion-session-\(sessionID.uuidString)"
+        
+        let filename: String
+        if let name = session.name, !name.isEmpty {
+            filename = "\(name)-\(session.id.uuidString)"
+        } else {
+            filename = "motion-session-\(session.id.uuidString)"
+        }
         return directory
             .appending(path: filename)
             .appendingPathExtension(fileType)

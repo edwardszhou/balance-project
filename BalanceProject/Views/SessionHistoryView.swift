@@ -24,8 +24,16 @@ struct SessionHistoryView: View {
             ForEach(viewModel.sessions) { session in
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(session.startDate.formatted(date: .abbreviated, time: .shortened))
-                            .font(.headline)
+                        if let name = session.name {
+                            Text(name)
+                                .font(.headline)
+                            Text(session.startDate.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(session.startDate.formatted(date: .abbreviated, time: .shortened))
+                                .font(.headline)
+                        }
                         
                         Text("Samples: \(session.datapoints.count)")
                             .font(.caption)

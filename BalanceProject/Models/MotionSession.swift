@@ -11,6 +11,7 @@ struct MotionSession: Codable, Identifiable {
     let id: UUID
     let startDate: Date
     
+    var name: String?
     var endDate: Date?
     var datapoints: [MotionDatapoint]
 

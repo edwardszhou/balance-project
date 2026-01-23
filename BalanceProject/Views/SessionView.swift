@@ -10,6 +10,10 @@ struct SessionView: View {
     @State private var sessionViewModel = SessionViewModel()
     @State private var historyViewModel = SessionHistoryViewModel()
     
+    @State private var showNamePrompt = false
+    @State private var pendingSession: MotionSession?
+    @State private var sessionName = ""
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
@@ -60,7 +64,8 @@ struct SessionView: View {
                 } else {
                     Button(role: .cancel) {
                         if let session = sessionViewModel.endSession() {
-                            historyViewModel.addSession(session)
+                            pendingSession = session
+                            showNamePrompt = true
                         }
                     } label: {
                         Text("End Session")
@@ -69,6 +74,17 @@ struct SessionView: View {
                 }
             }
             .padding(64)
+        }
+        .alert("Name Session", isPresented: $showNamePrompt) {
+            TextField("Name", text: $sessionName)
+            Button("Save") {
+                var session = pendingSession!
+                session.name = sessionName
+                historyViewModel.addSession(session)
+                
+                sessionName = ""
+                pendingSession = nil
+            }
         }
     }
 }
