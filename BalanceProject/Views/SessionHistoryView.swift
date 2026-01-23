@@ -9,6 +9,12 @@ struct SessionHistoryView: View {
     
     @Bindable var viewModel: SessionHistoryViewModel
     
+    private let exportActions: [(SessionHistoryViewModel.SessionExportType, String)] = [
+        (.json, "square.and.arrow.up"),
+        (.csv, "tablecells"),
+        (.graph, "chart.xyaxis.line"),
+    ]
+    
     var body: some View {
         List {
             if viewModel.sessions.isEmpty {
@@ -28,28 +34,19 @@ struct SessionHistoryView: View {
                     .padding(.vertical, 4)
                     Spacer()
                     HStack(spacing: 8) {
-                        Button {
-                            viewModel.prepareExport(session, type: .json)
-                        } label: {
-                            if viewModel.isPreparingExport {
-                                ProgressView()
-                            } else {
-                                Image(systemName: "square.and.arrow.up")
+                        ForEach(exportActions, id: \.0) { type, systemImage in
+                            Button {
+                                viewModel.prepareExport(session, type: type)
+                            } label: {
+                                if viewModel.isPreparingExport {
+                                    ProgressView()
+                                } else {
+                                    Image(systemName: systemImage)
+                                }
                             }
+                            .buttonStyle(.bordered)
+                            .disabled(viewModel.isPreparingExport)
                         }
-                        .buttonStyle(.bordered)
-                        .disabled(viewModel.isPreparingExport)
-                        Button {
-                            viewModel.prepareExport(session, type: .graph)
-                        } label: {
-                            if viewModel.isPreparingExport {
-                                ProgressView()
-                            } else {
-                                Image(systemName: "chart.xyaxis.line")
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(viewModel.isPreparingExport)
                     }
                 }
             }
@@ -65,6 +62,25 @@ struct SessionHistoryView: View {
             .presentationDetents([.height(200)])
         }
         .navigationTitle("Session History")
+    }
+    
+    struct ExportButton: View {
+
+        let systemImage: String
+        let isLoading: Bool
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                if isLoading {
+                    ProgressView()
+                } else {
+                    Image(systemName: systemImage)
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(isLoading)
+        }
     }
 }
 

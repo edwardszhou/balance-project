@@ -21,6 +21,7 @@ class SessionHistoryViewModel {
     enum SessionExportType {
         case graph
         case json
+        case csv
     }
     
     func prepareExport(_ session: MotionSession, type: SessionExportType = .json) {
@@ -34,7 +35,10 @@ class SessionHistoryViewModel {
                 url = self.exportService.exportToJSON(session)
             case .graph:
                 url = self.exportService.exportGraph(session)
+            case .csv:
+                url = self.exportService.exportToCSV(session)
             }
+            
 
             DispatchQueue.main.async {
                 self.exportURL = url
