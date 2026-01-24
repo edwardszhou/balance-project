@@ -18,7 +18,7 @@ class SessionViewModel {
     
     init() {
         motionService.onUpdate = { [weak self] data in
-            guard let self else { return }
+            guard let self, self.isRecording else { return }
             
             let datapoint = MotionDatapoint(data)
             

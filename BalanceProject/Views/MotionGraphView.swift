@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Charts
 
 struct MotionGraphView: View {
 
@@ -12,115 +13,88 @@ struct MotionGraphView: View {
     var body: some View {
         VStack(spacing: 24) {
             graphSection(
-                title: "Orientation",
-                legend: [
-                    ("Pitch", .red),
-                    ("Roll", .green),
-                    ("Yaw", .blue)
-                ],
-                series: [
-                    session.datapoints.map { $0.pitch },
-                    session.datapoints.map { $0.roll },
-                    session.datapoints.map { $0.yaw }
-                ],
-                colors: [.red, .green, .blue]
+                title: "Orientation (rad)",
+                data: orientationData
             )
-
             graphSection(
-                title: "Rotation Rate",
-                legend: [
-                    ("X", .red),
-                    ("Y", .green),
-                    ("Z", .blue)
-                ],
-                series: [
-                    session.datapoints.map { $0.rotationRateX },
-                    session.datapoints.map { $0.rotationRateY },
-                    session.datapoints.map { $0.rotationRateZ }
-                ],
-                colors: [.red, .green, .blue]
+                title: "Rotation Rate (rad/s)",
+                data: rotationData
             )
-
             graphSection(
-                title: "Acceleration",
-                legend: [
-                    ("X", .red),
-                    ("Y", .green),
-                    ("Z", .blue)
-                ],
-                series: [
-                    session.datapoints.map { $0.accelerationX },
-                    session.datapoints.map { $0.accelerationY },
-                    session.datapoints.map { $0.accelerationZ }
-                ],
-                colors: [.red, .green, .blue]
+                title: "Acceleration (m/s^2)",
+                data: accelerationData
             )
         }
         .padding()
         .background(Color.white)
     }
-
-
+    
     private func graphSection(
         title: String,
-        legend: [(String, Color)],
-        series: [[Double]],
-        colors: [Color]
+        data: [GraphDatapoint]
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.headline)
 
-            HStack(spacing: 16) {
-                ForEach(legend, id: \.0) { label, color in
-                    HStack(spacing: 6) {
-                        Rectangle()
-                            .fill(color)
-                            .frame(width: 12, height: 12)
-
-                        Text(label)
-                            .font(.caption)
-                    }
-                }
+            Chart(data) {
+                LineMark(
+                    x: .value("Time", $0.time),
+                    y: .value("Value", $0.value)
+                )
+                .foregroundStyle(by: .value("Axis", $0.label))
             }
-
-            GeometryReader { geo in
-                ZStack {
-                    ForEach(series.indices, id: \.self) { index in
-                        Path { path in
-                            plot(
-                                values: series[index],
-                                in: geo.size,
-                                path: &path
-                            )
-                        }
-                        .stroke(colors[index], lineWidth: 2)
-                    }
-                }
+            .chartXAxis {
+                AxisMarks(values: .stride(by: 0.5))
             }
-            .frame(height: 200)
+            .chartYAxis {
+                AxisMarks(
+                    position: .leading,
+                    values: .automatic(desiredCount: 8)
+                )
+            }
+            .chartXAxisLabel("Time (s)")
+            .chartYAxisLabel(title)
+            .frame(height: 220)
         }
     }
 
-
-    private func plot(
-        values: [Double],
-        in size: CGSize,
-        path: inout Path
-    ) {
-        guard values.count > 1 else { return }
-
-        let minVal = values.min() ?? 0
-        let maxVal = values.max() ?? 1
-        let range = max(maxVal - minVal, 0.0001)
-
-        for (index, value) in values.enumerated() {
-            let x = size.width * CGFloat(index) / CGFloat(values.count - 1)
-            let y = size.height * (1 - CGFloat((value - minVal) / range))
-
-            index == 0
-                ? path.move(to: CGPoint(x: x, y: y))
-                : path.addLine(to: CGPoint(x: x, y: y))
+    private var orientationData: [GraphDatapoint] {
+        session.datapoints.flatMap { datapoint in
+            let t = datapoint.sessionTime(since: session.startDate)
+            return [
+                GraphDatapoint(time: t, value: datapoint.pitch, label: "Pitch"),
+                GraphDatapoint(time: t, value: datapoint.roll, label: "Roll"),
+                GraphDatapoint(time: t, value: datapoint.yaw, label: "Yaw")
+            ]
         }
+    }
+
+    private var rotationData: [GraphDatapoint] {
+        session.datapoints.flatMap { datapoint in
+            let t = datapoint.sessionTime(since: session.startDate)
+            return [
+                GraphDatapoint(time: t, value: datapoint.rotationRateX, label: "X"),
+                GraphDatapoint(time: t, value: datapoint.rotationRateY, label: "Y"),
+                GraphDatapoint(time: t, value: datapoint.rotationRateZ, label: "Z")
+            ]
+        }
+    }
+
+    private var accelerationData: [GraphDatapoint] {
+        session.datapoints.flatMap { datapoint in
+            let t = datapoint.sessionTime(since: session.startDate)
+            return [
+                GraphDatapoint(time: t, value: datapoint.accelerationX, label: "X"),
+                GraphDatapoint(time: t, value: datapoint.accelerationY, label: "Y"),
+                GraphDatapoint(time: t, value: datapoint.accelerationZ, label: "Z")
+            ]
+        }
+    }
+}
+
+extension MotionDatapoint {
+    func sessionTime(since sessionStart: Date) -> TimeInterval {
+        timestamp.timeIntervalSince(sessionStart)
     }
 }

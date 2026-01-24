@@ -46,11 +46,7 @@ struct SessionHistoryView: View {
                             Button {
                                 viewModel.prepareExport(session, type: type)
                             } label: {
-                                if viewModel.isPreparingExport {
-                                    ProgressView()
-                                } else {
-                                    Image(systemName: systemImage)
-                                }
+                                Image(systemName: systemImage)
                             }
                             .buttonStyle(.bordered)
                             .disabled(viewModel.isPreparingExport)
@@ -70,25 +66,6 @@ struct SessionHistoryView: View {
             .presentationDetents([.height(200)])
         }
         .navigationTitle("Session History")
-    }
-    
-    struct ExportButton: View {
-
-        let systemImage: String
-        let isLoading: Bool
-        let action: () -> Void
-
-        var body: some View {
-            Button(action: action) {
-                if isLoading {
-                    ProgressView()
-                } else {
-                    Image(systemName: systemImage)
-                }
-            }
-            .buttonStyle(.bordered)
-            .disabled(isLoading)
-        }
     }
 }
 

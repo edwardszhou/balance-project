@@ -83,7 +83,10 @@ class SessionExportService {
 
     
     private func getFileUrl(_ session: MotionSession, fileType: String) -> URL {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = FileManager.default.urls(
+            for: .documentDirectory,
+            in: .userDomainMask
+        )[0]
         
         let filename: String
         if let name = session.name, !name.isEmpty {
