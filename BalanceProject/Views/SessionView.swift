@@ -38,6 +38,8 @@ struct SessionView: View {
                 
                 if let currentData = sessionViewModel.currentData {
                     VStack(alignment: .leading, spacing: 8) {
+                        Text("Sample Rate (Hz): \(sessionViewModel.currentHz, specifier: "%.1f")")
+                        Spacer().frame(maxHeight: 32)
                         Text("Pitch: \(currentData.pitch, specifier: "%.3f")")
                         Text("Roll: \(currentData.roll, specifier: "%.3f")")
                         Text("Yaw: \(currentData.yaw, specifier: "%.3f")")

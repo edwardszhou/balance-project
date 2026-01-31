@@ -12,18 +12,20 @@ import Observation
 class SessionViewModel {
     var currentSession: MotionSession?
     var currentData: MotionDatapoint?
+    var currentHz: TimeInterval = 0
     var isRecording: Bool = false
     
     private let motionService = AirpodMotionService()
     
     init() {
-        motionService.onUpdate = { [weak self] data in
+        motionService.onUpdate = { [weak self] data, hz in
             guard let self, self.isRecording else { return }
             
             let datapoint = MotionDatapoint(data)
             
             self.currentSession?.addDatapoint(datapoint)
             self.currentData = datapoint
+            self.currentHz = hz
         }
     }
     
@@ -42,6 +44,8 @@ class SessionViewModel {
         session.end()
         
         currentSession = nil
+        currentData = nil
+        currentHz = 0
         isRecording = false
         
         return session
