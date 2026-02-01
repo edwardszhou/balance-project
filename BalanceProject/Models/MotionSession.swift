@@ -13,16 +13,21 @@ struct MotionSession: Codable, Identifiable {
     
     var name: String?
     var endDate: Date?
-    var datapoints: [MotionDatapoint]
+    var airpodDatapoints: [MotionDatapoint]
+    var phoneDatapoints: [MotionDatapoint]
 
     init() {
         id = UUID()
         startDate = Date()
-        datapoints = []
+        airpodDatapoints = []
+        phoneDatapoints = []
     }
     
     mutating func addDatapoint(_ datapoint: MotionDatapoint) {
-        datapoints.append(datapoint)
+        switch datapoint.source {
+        case .airpods: airpodDatapoints.append(datapoint)
+        case .phone: phoneDatapoints.append(datapoint)
+        }
     }
     
     mutating func end() {

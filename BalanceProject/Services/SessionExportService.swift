@@ -71,7 +71,7 @@ class SessionExportService {
         }
         
         var csv = csvHeader() + "\n"
-        for datapoint in session.datapoints {
+        for datapoint in session.airpodDatapoints {
             csv.append(csvRow(from: datapoint))
             csv.append("\n")
         }
@@ -101,7 +101,7 @@ class SessionExportService {
             filename = "motion-session-\(session.id.uuidString)"
         }
         return directory
-            .appending(path: filename)
+            .appendingPathComponent(filename)
             .appendingPathExtension(fileType)
     }
     

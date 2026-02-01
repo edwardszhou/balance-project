@@ -11,21 +11,36 @@ import Observation
 @MainActor
 class SessionViewModel {
     var currentSession: MotionSession?
-    var currentData: MotionDatapoint?
-    var currentHz: TimeInterval = 0
+    
+    var currentAirpodsData: MotionDatapoint?
+    var currentAirpodsHz: TimeInterval = 0
+    var currentPhoneData: MotionDatapoint?
+    var currentPhoneHz: TimeInterval = 0
+    
     var isRecording: Bool = false
     
-    private let motionService = AirpodMotionService()
+    private let airpodMotion = AirpodMotionService()
+    private let phoneMotion = PhoneMotionService()
     
     init() {
-        motionService.onUpdate = { [weak self] data, hz in
+        airpodMotion.onUpdate = { [weak self] data, hz in
             guard let self, self.isRecording else { return }
             
-            let datapoint = MotionDatapoint(data)
+            let datapoint = MotionDatapoint(data, motionSource: .airpods)
             
             self.currentSession?.addDatapoint(datapoint)
-            self.currentData = datapoint
-            self.currentHz = hz
+            self.currentAirpodsData = datapoint
+            self.currentAirpodsHz = hz
+        }
+        
+        phoneMotion.onUpdate = { [weak self] data, hz in
+            guard let self, self.isRecording else { return }
+            
+            let datapoint = MotionDatapoint(data, motionSource: .phone)
+            
+            self.currentSession?.addDatapoint(datapoint)
+            self.currentPhoneData = datapoint
+            self.currentPhoneHz = hz
         }
     }
     
@@ -33,19 +48,21 @@ class SessionViewModel {
         guard !isRecording else { return }
         
         currentSession = MotionSession()
-        motionService.startTracking()
+        airpodMotion.startTracking()
+        phoneMotion.startTracking()
 
         isRecording = true
     }
     func endSession() -> MotionSession? {
         guard isRecording, var session = currentSession else { return nil }
         
-        motionService.stopTracking()
+        airpodMotion.stopTracking()
+        phoneMotion.stopTracking()
         session.end()
         
         currentSession = nil
-        currentData = nil
-        currentHz = 0
+        currentAirpodsHz = 0
+        currentPhoneHz = 0
         isRecording = false
         
         return session

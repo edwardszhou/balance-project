@@ -60,7 +60,7 @@ struct MotionGraphView: View {
     }
 
     private var orientationData: [GraphDatapoint] {
-        session.datapoints.flatMap { datapoint in
+        session.airpodDatapoints.flatMap { datapoint in
             let t = datapoint.sessionTime(since: session.startDate)
             return [
                 GraphDatapoint(time: t, value: datapoint.pitch, label: "Pitch"),
@@ -71,7 +71,7 @@ struct MotionGraphView: View {
     }
 
     private var rotationData: [GraphDatapoint] {
-        session.datapoints.flatMap { datapoint in
+        session.airpodDatapoints.flatMap { datapoint in
             let t = datapoint.sessionTime(since: session.startDate)
             return [
                 GraphDatapoint(time: t, value: datapoint.rotationRateX, label: "X"),
@@ -82,7 +82,7 @@ struct MotionGraphView: View {
     }
 
     private var accelerationData: [GraphDatapoint] {
-        session.datapoints.flatMap { datapoint in
+        session.airpodDatapoints.flatMap { datapoint in
             let t = datapoint.sessionTime(since: session.startDate)
             return [
                 GraphDatapoint(time: t, value: datapoint.accelerationX, label: "X"),

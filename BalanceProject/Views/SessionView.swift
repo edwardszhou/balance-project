@@ -36,9 +36,9 @@ struct SessionView: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(sessionViewModel.isRecording ? .red : .secondary)
                 
-                if let currentData = sessionViewModel.currentData {
+                if let currentData = sessionViewModel.currentAirpodsData {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Sample Rate (Hz): \(sessionViewModel.currentHz, specifier: "%.1f")")
+                        Text("Sample Rate (Hz): \(sessionViewModel.currentAirpodsHz, specifier: "%.1f")")
                         Spacer().frame(maxHeight: 32)
                         Text("Pitch: \(currentData.pitch, specifier: "%.3f")")
                         Text("Roll: \(currentData.roll, specifier: "%.3f")")

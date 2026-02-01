@@ -35,7 +35,7 @@ struct SessionHistoryView: View {
                                 .font(.headline)
                         }
                         
-                        Text("Samples: \(session.datapoints.count)")
+                        Text("Samples: \(session.airpodDatapoints.count)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

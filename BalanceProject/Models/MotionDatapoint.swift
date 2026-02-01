@@ -6,8 +6,14 @@
 import Foundation
 import CoreMotion
 
+enum MotionSource : String, Codable {
+    case phone
+    case airpods
+}
+
 struct MotionDatapoint: Codable, Identifiable {
 
+    let source: MotionSource
     let id: UUID
     let timestamp: Date
     let epochMilliseconds: Int64
@@ -25,8 +31,9 @@ struct MotionDatapoint: Codable, Identifiable {
     let accelerationY: Double
     let accelerationZ: Double
 
-    init(_ motion: CMDeviceMotion) {
+    init(_ motion: CMDeviceMotion, motionSource: MotionSource) {
         id = UUID()
+        source = motionSource
         timestamp = Date()
         epochMilliseconds = Int64(timestamp.timeIntervalSince1970 * 1000)
 
