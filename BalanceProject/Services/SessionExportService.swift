@@ -44,8 +44,14 @@ class SessionExportService {
         }
         
         let encoder = JSONEncoder()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        formatter.calendar = Calendar(identifier: .iso8601)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    
         encoder.outputFormatting = [.prettyPrinted]
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = .formatted(formatter)
         
         do {
             let data = try encoder.encode(session)
@@ -101,7 +107,6 @@ class SessionExportService {
     
     private func csvHeader() -> String {
         [
-            "id",
             "timestamp",
             "pitch",
             "roll",
@@ -117,8 +122,14 @@ class SessionExportService {
 
     private func csvRow(from datapoint: MotionDatapoint) -> String {
         [
-            datapoint.id.uuidString,
-            ISO8601DateFormatter().string(from: datapoint.timestamp),
+            datapoint.timestamp.formatted(.iso8601
+                .year()
+                .month()
+                .day()
+                .timeZone(separator: .omitted)
+                .time(includingFractionalSeconds: true)
+                .timeSeparator(.colon)
+            ),
             String(format: "%.6f", datapoint.pitch),
             String(format: "%.6f", datapoint.roll),
             String(format: "%.6f", datapoint.yaw),
