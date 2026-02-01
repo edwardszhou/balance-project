@@ -10,6 +10,8 @@ struct MotionDatapoint: Codable, Identifiable {
 
     let id: UUID
     let timestamp: Date
+    let epochMilliseconds: Int64
+
 
     let pitch: Double
     let roll: Double
@@ -26,6 +28,7 @@ struct MotionDatapoint: Codable, Identifiable {
     init(_ motion: CMDeviceMotion) {
         id = UUID()
         timestamp = Date()
+        epochMilliseconds = Int64(timestamp.timeIntervalSince1970 * 1000)
 
         pitch = motion.attitude.pitch
         roll = motion.attitude.roll

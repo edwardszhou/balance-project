@@ -108,6 +108,7 @@ class SessionExportService {
     private func csvHeader() -> String {
         [
             "timestamp",
+            "epochMilliseconds",
             "pitch",
             "roll",
             "yaw",
@@ -121,24 +122,30 @@ class SessionExportService {
     }
 
     private func csvRow(from datapoint: MotionDatapoint) -> String {
-        [
-            datapoint.timestamp.formatted(.iso8601
-                .year()
-                .month()
-                .day()
-                .timeZone(separator: .omitted)
-                .time(includingFractionalSeconds: true)
-                .timeSeparator(.colon)
-            ),
-            String(format: "%.6f", datapoint.pitch),
-            String(format: "%.6f", datapoint.roll),
-            String(format: "%.6f", datapoint.yaw),
-            String(format: "%.6f", datapoint.rotationRateX),
-            String(format: "%.6f", datapoint.rotationRateY),
-            String(format: "%.6f", datapoint.rotationRateZ),
-            String(format: "%.6f", datapoint.accelerationX),
-            String(format: "%.6f", datapoint.accelerationY),
-            String(format: "%.6f", datapoint.accelerationZ)
+        let isoTimestamp = datapoint.timestamp.formatted(.iso8601
+            .year()
+            .month()
+            .day()
+            .timeZone(separator: .omitted)
+            .time(includingFractionalSeconds: true)
+            .timeSeparator(.colon)
+        )
+        let toString = FloatingPointFormatStyle<Double>
+            .number
+            .precision(.fractionLength(6))
+        
+        return [
+            isoTimestamp,
+            String(datapoint.epochMilliseconds),
+            datapoint.pitch.formatted(toString),
+            datapoint.roll.formatted(toString),
+            datapoint.yaw.formatted(toString),
+            datapoint.rotationRateX.formatted(toString),
+            datapoint.rotationRateY.formatted(toString),
+            datapoint.rotationRateZ.formatted(toString),
+            datapoint.accelerationX.formatted(toString),
+            datapoint.accelerationY.formatted(toString),
+            datapoint.accelerationZ.formatted(toString),
         ].joined(separator: ",")
     }
 
