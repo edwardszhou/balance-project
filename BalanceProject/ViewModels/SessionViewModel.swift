@@ -19,11 +19,11 @@ class SessionViewModel {
     
     var isRecording: Bool = false
     
-    private let airpodMotion = AirpodMotionService()
+    private let airpodsMotion = AirpodsMotionService()
     private let phoneMotion = PhoneMotionService()
     
     init() {
-        airpodMotion.onUpdate = { [weak self] data, hz in
+        airpodsMotion.onUpdate = { [weak self] data, hz in
             guard let self, self.isRecording else { return }
             
             let datapoint = MotionDatapoint(data, motionSource: .airpods)
@@ -52,7 +52,7 @@ class SessionViewModel {
         guard !isRecording else { return }
         
         currentSession = MotionSession()
-        airpodMotion.startTracking()
+        airpodsMotion.startTracking()
         phoneMotion.startTracking()
 
         isRecording = true
@@ -60,7 +60,7 @@ class SessionViewModel {
     func endSession() -> MotionSession? {
         guard isRecording, var session = currentSession else { return nil }
         
-        airpodMotion.stopTracking()
+        airpodsMotion.stopTracking()
         phoneMotion.stopTracking()
         session.end()
         

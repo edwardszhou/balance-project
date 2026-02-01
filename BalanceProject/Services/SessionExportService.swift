@@ -64,6 +64,7 @@ class SessionExportService {
             return nil
         }
     }
+    
     func exportToCSV(_ session: MotionSession) -> URL? {
         guard session.endDate != nil else {
             print("Session has not ended yet.")
@@ -71,7 +72,11 @@ class SessionExportService {
         }
         
         var csv = csvHeader() + "\n"
-        for datapoint in session.airpodDatapoints {
+        for datapoint in session.airpodsDatapoints {
+            csv.append(csvRow(from: datapoint))
+            csv.append("\n")
+        }
+        for datapoint in session.phoneDatapoints {
             csv.append(csvRow(from: datapoint))
             csv.append("\n")
         }
@@ -107,6 +112,7 @@ class SessionExportService {
     
     private func csvHeader() -> String {
         [
+            "source",
             "timestamp",
             "epochMilliseconds",
             "pitch",
@@ -135,6 +141,7 @@ class SessionExportService {
             .precision(.fractionLength(6))
         
         return [
+            datapoint.source.rawValue,
             isoTimestamp,
             String(datapoint.epochMilliseconds),
             datapoint.pitch.formatted(toString),

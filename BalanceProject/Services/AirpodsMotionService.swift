@@ -1,12 +1,12 @@
 //
-//  AirpodMotionService.swift
+//  AirpodsMotionService.swift
 //  BalanceProject
 //
 
 import Foundation
 import CoreMotion
 
-class AirpodMotionService: MotionService {
+class AirpodsMotionService: MotionService {
     private let motionManager = CMHeadphoneMotionManager()
     
     func startTracking() {

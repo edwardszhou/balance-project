@@ -12,4 +12,5 @@ struct GraphDatapoint: Identifiable {
     let time: TimeInterval
     let value: Double
     let label: String
+    let source: MotionSource
 }

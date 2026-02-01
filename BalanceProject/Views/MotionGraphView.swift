@@ -14,15 +14,18 @@ struct MotionGraphView: View {
         VStack(spacing: 24) {
             graphSection(
                 title: "Orientation (rad)",
-                data: orientationData
+                airpodsData: orientationData(from: session.airpodsDatapoints, source: .airpods),
+                phoneData: orientationData(from: session.phoneDatapoints, source: .phone)
             )
             graphSection(
                 title: "Rotation Rate (rad/s)",
-                data: rotationData
+                airpodsData: rotationData(from: session.airpodsDatapoints, source: .airpods),
+                phoneData: rotationData(from: session.phoneDatapoints, source: .phone)
             )
             graphSection(
                 title: "Acceleration (m/s^2)",
-                data: accelerationData
+                airpodsData: accelerationData(from: session.airpodsDatapoints, source: .airpods),
+                phoneData: accelerationData(from: session.phoneDatapoints, source: .phone)
             )
         }
         .padding()
@@ -31,18 +34,22 @@ struct MotionGraphView: View {
     
     private func graphSection(
         title: String,
-        data: [GraphDatapoint]
+        airpodsData: [GraphDatapoint],
+        phoneData: [GraphDatapoint]
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let combinedData = airpodsData + phoneData
+        
+        return VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.headline)
 
-            Chart(data) {
+            Chart(combinedData) { datapoint in
                 LineMark(
-                    x: .value("Time", $0.time),
-                    y: .value("Value", $0.value)
+                    x: .value("Time", datapoint.time),
+                    y: .value("Value", datapoint.value)
                 )
-                .foregroundStyle(by: .value("Axis", $0.label))
+                .foregroundStyle(by: .value("Axis", datapoint.label))
+                .lineStyle(by: .value("Source", datapoint.source.rawValue))
             }
             .chartXAxis {
                 AxisMarks(values: .stride(by: 0.5))
@@ -59,35 +66,35 @@ struct MotionGraphView: View {
         }
     }
 
-    private var orientationData: [GraphDatapoint] {
-        session.airpodDatapoints.flatMap { datapoint in
+    private func orientationData(from datapoints: [MotionDatapoint], source: MotionSource) -> [GraphDatapoint] {
+        datapoints.flatMap { datapoint in
             let t = datapoint.sessionTime(since: session.startDate)
             return [
-                GraphDatapoint(time: t, value: datapoint.pitch, label: "Pitch"),
-                GraphDatapoint(time: t, value: datapoint.roll, label: "Roll"),
-                GraphDatapoint(time: t, value: datapoint.yaw, label: "Yaw")
+                GraphDatapoint(time: t, value: datapoint.pitch, label: "Pitch", source: source),
+                GraphDatapoint(time: t, value: datapoint.roll, label: "Roll", source: source),
+                GraphDatapoint(time: t, value: datapoint.yaw, label: "Yaw", source: source)
             ]
         }
     }
 
-    private var rotationData: [GraphDatapoint] {
-        session.airpodDatapoints.flatMap { datapoint in
+    private func rotationData(from datapoints: [MotionDatapoint], source: MotionSource) -> [GraphDatapoint] {
+        datapoints.flatMap { datapoint in
             let t = datapoint.sessionTime(since: session.startDate)
             return [
-                GraphDatapoint(time: t, value: datapoint.rotationRateX, label: "X"),
-                GraphDatapoint(time: t, value: datapoint.rotationRateY, label: "Y"),
-                GraphDatapoint(time: t, value: datapoint.rotationRateZ, label: "Z")
+                GraphDatapoint(time: t, value: datapoint.rotationRateX, label: "X", source: source),
+                GraphDatapoint(time: t, value: datapoint.rotationRateY, label: "Y", source: source),
+                GraphDatapoint(time: t, value: datapoint.rotationRateZ, label: "Z", source: source)
             ]
         }
     }
 
-    private var accelerationData: [GraphDatapoint] {
-        session.airpodDatapoints.flatMap { datapoint in
+    private func accelerationData(from datapoints: [MotionDatapoint], source: MotionSource) -> [GraphDatapoint] {
+        datapoints.flatMap { datapoint in
             let t = datapoint.sessionTime(since: session.startDate)
             return [
-                GraphDatapoint(time: t, value: datapoint.accelerationX, label: "X"),
-                GraphDatapoint(time: t, value: datapoint.accelerationY, label: "Y"),
-                GraphDatapoint(time: t, value: datapoint.accelerationZ, label: "Z")
+                GraphDatapoint(time: t, value: datapoint.accelerationX, label: "X", source: source),
+                GraphDatapoint(time: t, value: datapoint.accelerationY, label: "Y", source: source),
+                GraphDatapoint(time: t, value: datapoint.accelerationZ, label: "Z", source: source)
             ]
         }
     }
