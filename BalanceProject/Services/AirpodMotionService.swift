@@ -8,11 +8,6 @@ import CoreMotion
 
 class AirpodMotionService: MotionService {
     private let motionManager = CMHeadphoneMotionManager()
-    private let motionQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.qualityOfService = .userInteractive
-        return queue
-    }()
     
     func startTracking() {
         guard motionManager.isDeviceMotionAvailable else {
@@ -27,6 +22,9 @@ class AirpodMotionService: MotionService {
     }
     
     func stopTracking() {
-        reset()
+        motionManager.stopDeviceMotionUpdates()
+        motionQueue.addOperation { [weak self] in
+            self?.reset()
+        }
     }
 }

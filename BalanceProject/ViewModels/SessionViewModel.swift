@@ -28,9 +28,11 @@ class SessionViewModel {
             
             let datapoint = MotionDatapoint(data, motionSource: .airpods)
             
-            self.currentSession?.addDatapoint(datapoint)
-            self.currentAirpodsData = datapoint
-            self.currentAirpodsHz = hz
+            Task{ @MainActor in
+                self.currentSession?.addDatapoint(datapoint)
+                self.currentAirpodsData = datapoint
+                self.currentAirpodsHz = hz
+            }
         }
         
         phoneMotion.onUpdate = { [weak self] data, hz in
@@ -38,9 +40,11 @@ class SessionViewModel {
             
             let datapoint = MotionDatapoint(data, motionSource: .phone)
             
-            self.currentSession?.addDatapoint(datapoint)
-            self.currentPhoneData = datapoint
-            self.currentPhoneHz = hz
+            Task{ @MainActor in
+                self.currentSession?.addDatapoint(datapoint)
+                self.currentPhoneData = datapoint
+                self.currentPhoneHz = hz
+            }
         }
     }
     

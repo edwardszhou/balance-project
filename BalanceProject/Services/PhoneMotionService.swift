@@ -8,11 +8,6 @@ import CoreMotion
 
 class PhoneMotionService: MotionService {
     private let motionManager = CMMotionManager()
-    private let motionQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.qualityOfService = .userInteractive
-        return queue
-    }()
     
     func startTracking() {
         guard motionManager.isDeviceMotionAvailable else {
@@ -27,7 +22,10 @@ class PhoneMotionService: MotionService {
     }
     
     func stopTracking() {
-        reset()
+        motionManager.stopDeviceMotionUpdates()
+        motionQueue.addOperation { [weak self] in
+            self?.reset()
+        }
     }
 }
 

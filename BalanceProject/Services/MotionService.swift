@@ -13,6 +13,13 @@ class MotionService {
     private var lastTimestampDeltas: [TimeInterval] = []
     private let maxDeltas = 20
     
+    let motionQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.qualityOfService = .userInteractive
+        queue.maxConcurrentOperationCount = 1
+        return queue
+    }()
+    
     func handleUpdate(_ motion: CMDeviceMotion) {
         let hz = getHertz(motion.timestamp)
         onUpdate?(motion, hz)
