@@ -16,46 +16,38 @@ struct SessionView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
+            VStack {
                 Text("Balance Project")
                     .font(.system(size: 36, weight: .bold))
                     .foregroundColor(.primary)
-                Image(systemName: "airpodspro")
-                    .font(.system(size: 50))
-                    .foregroundColor(.blue)
             }
-            .padding(64)
+            .padding(24)
             .toolbar {
                 NavigationLink("History") {
                     SessionHistoryView(viewModel: historyViewModel)
                 }
             }
             Spacer()
-            VStack(spacing: 24) {
-                Text(sessionViewModel.isRecording ? "Recording…" : "Idle")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(sessionViewModel.isRecording ? .red : .secondary)
-                
-                if let currentData = sessionViewModel.currentAirpodsData {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Sample Rate (Hz): \(sessionViewModel.currentAirpodsHz, specifier: "%.1f")")
-                        Spacer().frame(maxHeight: 32)
-                        Text("Pitch: \(currentData.pitch, specifier: "%.3f")")
-                        Text("Roll: \(currentData.roll, specifier: "%.3f")")
-                        Text("Yaw: \(currentData.yaw, specifier: "%.3f")")
-                        Spacer().frame(maxHeight: 32)
-                        Text("Rotation Rate X: \(currentData.rotationRateX, specifier: "%.3f")")
-                        Text("Rotation Rate Y: \(currentData.rotationRateY, specifier: "%.3f")")
-                        Text("Rotation Rate Z: \(currentData.rotationRateZ, specifier: "%.3f")")
-                        Spacer().frame(maxHeight: 32)
-                        Text("Acceleration X: \(currentData.accelerationX, specifier: "%.3f")")
-                        Text("Acceleration Y: \(currentData.accelerationY, specifier: "%.3f")")
-                        Text("Acceleration Z: \(currentData.accelerationZ, specifier: "%.3f")")
-                    }
-                }
+            TabView {
+                MotionDataView(
+                    title: "Airpods Motion",
+                    imageSystemName: "airpodspro",
+                    isRecording: sessionViewModel.isRecording,
+                    data: sessionViewModel.currentAirpodsData,
+                    sampleRate: sessionViewModel.currentAirpodsHz
+                )
+                MotionDataView(
+                    title: "iPhone Motion",
+                    imageSystemName: "iphone.motion",
+                    isRecording: sessionViewModel.isRecording,
+                    data: sessionViewModel.currentPhoneData,
+                    sampleRate: sessionViewModel.currentPhoneHz
+                )
             }
+            .tabViewStyle(.page)
+            .frame(maxHeight: .infinity)
             Spacer()
-            HStack(spacing: 24) {
+            HStack{
                 if !sessionViewModel.isRecording {
                     Button {
                         sessionViewModel.startSession()
@@ -75,7 +67,7 @@ struct SessionView: View {
                     .buttonStyle(.bordered)
                 }
             }
-            .padding(64)
+            .padding(24)
         }
         .alert("Name Session", isPresented: $showNamePrompt) {
             TextField("Name", text: $sessionName)
@@ -88,6 +80,57 @@ struct SessionView: View {
                 pendingSession = nil
             }
         }
+    }
+}
+
+struct MotionDataView: View {
+    let title: String
+    let imageSystemName: String
+    let isRecording: Bool
+    let data: MotionDatapoint?
+    let sampleRate: Double
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.headline)
+            Image(systemName: imageSystemName)
+                .font(.system(size: 24))
+                .foregroundColor(.blue)
+            Text(isRecording ? "Recording" : "Not recording")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(isRecording ? .red : .secondary)
+            Spacer()
+            VStack(alignment: .leading) {
+                if let data {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Sample Rate (Hz): \(sampleRate, specifier: "%.1f")")
+                        Spacer().frame(maxHeight: 16)
+                        Text("Pitch: \(data.pitch, specifier: "%.3f")")
+                        Text("Roll: \(data.roll, specifier: "%.3f")")
+                        Text("Yaw: \(data.yaw, specifier: "%.3f")")
+                        Spacer().frame(maxHeight: 16)
+                        Text("Rotation Rate X: \(data.rotationRateX, specifier: "%.3f")")
+                        Text("Rotation Rate Y: \(data.rotationRateY, specifier: "%.3f")")
+                        Text("Rotation Rate Z: \(data.rotationRateZ, specifier: "%.3f")")
+                        Spacer().frame(maxHeight: 16)
+                        Text("Acceleration X: \(data.accelerationX, specifier: "%.3f")")
+                        Text("Acceleration Y: \(data.accelerationY, specifier: "%.3f")")
+                        Text("Acceleration Z: \(data.accelerationZ, specifier: "%.3f")")
+                    }
+                } else {
+                    Text("No data yet.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(height: 360, alignment: .center)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color(UIColor.systemGray6))
+                .frame(width: 300))
+        .padding(.horizontal)
     }
 }
 
