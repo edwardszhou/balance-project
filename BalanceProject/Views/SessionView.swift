@@ -123,7 +123,7 @@ struct MotionDataView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .frame(height: 360, alignment: .center)
+            .frame(maxHeight: .infinity, alignment: .center)
         }
         .padding()
         .background(

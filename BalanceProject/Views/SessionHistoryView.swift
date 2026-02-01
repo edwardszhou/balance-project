@@ -34,8 +34,11 @@ struct SessionHistoryView: View {
                             Text(session.startDate.formatted(date: .abbreviated, time: .shortened))
                                 .font(.headline)
                         }
-                        
-                        Text("Samples: \(session.airpodsDatapoints.count)")
+                        Spacer()
+                        Text("Airpods Samples: \(session.airpodsDatapoints.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("Phone Samples: \(session.phoneDatapoints.count)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
