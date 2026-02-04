@@ -7,11 +7,11 @@ import Foundation
 import CoreMotion
 
 class MotionService {
-    var onUpdate: ((CMDeviceMotion, Double) -> Void)?
+    var onUpdate: ((CMDeviceMotion, MotionTiming) -> Void)?
     
     private var lastTimestamp: TimeInterval?
     private var lastTimestampDeltas: [TimeInterval] = []
-    private let maxDeltas = 20
+    private let maxDeltas = 10
     
     let motionQueue: OperationQueue = {
         let queue = OperationQueue()
@@ -21,8 +21,8 @@ class MotionService {
     }()
     
     func handleUpdate(_ motion: CMDeviceMotion) {
-        let hz = getHertz(motion.timestamp)
-        onUpdate?(motion, hz)
+        let timing = getTiming(motion.timestamp)
+        onUpdate?(motion, timing)
     }
     
     func reset() {
@@ -30,12 +30,13 @@ class MotionService {
         lastTimestampDeltas.removeAll()
     }
     
-    private func getHertz(_ timestamp: TimeInterval) -> Double {
+    private func getTiming(_ timestamp: TimeInterval) -> MotionTiming {
         defer { lastTimestamp = timestamp }
         
-        guard let lastTimestamp else { return 0 }
+        let now = Date()
+        guard let lastTimestamp else { return MotionTiming(now, dt: 0, hz: 0) }
         let delta = timestamp - lastTimestamp
-        guard delta > 0 else { return 0 }
+        guard delta > 0 else { return MotionTiming(now, dt: 0, hz: 0) }
         
         lastTimestampDeltas.append(delta)
         if lastTimestampDeltas.count > maxDeltas {
@@ -44,7 +45,7 @@ class MotionService {
         
         let avgDelta = lastTimestampDeltas.reduce(0, +) / Double(lastTimestampDeltas.count)
 
-        return 1.0 / avgDelta
+        return MotionTiming(now, dt: delta, hz: 1.0 / avgDelta)
         
         
     }

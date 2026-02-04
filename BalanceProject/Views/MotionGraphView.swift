@@ -110,6 +110,6 @@ struct MotionGraphView: View {
 
 extension MotionDatapoint {
     func sessionTime(since sessionStart: Date) -> TimeInterval {
-        timestamp.timeIntervalSince(sessionStart)
+        timing.timestamp.timeIntervalSince(sessionStart)
     }
 }

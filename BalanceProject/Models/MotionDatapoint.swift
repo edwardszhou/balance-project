@@ -6,18 +6,10 @@
 import Foundation
 import CoreMotion
 
-enum MotionSource : String, Codable {
-    case phone
-    case airpods
-}
-
 struct MotionDatapoint: Codable, Identifiable {
-
-    let source: MotionSource
     let id: UUID
-    let timestamp: Date
-    let epochMilliseconds: Int64
-
+    let source: MotionSource
+    let timing: MotionTiming
 
     let pitch: Double
     let roll: Double
@@ -31,22 +23,40 @@ struct MotionDatapoint: Codable, Identifiable {
     let accelerationY: Double
     let accelerationZ: Double
 
-    init(_ motion: CMDeviceMotion, motionSource: MotionSource) {
-        id = UUID()
-        source = motionSource
-        timestamp = Date()
-        epochMilliseconds = Int64(timestamp.timeIntervalSince1970 * 1000)
+    init(_ motion: CMDeviceMotion, timing: MotionTiming, source: MotionSource) {
+        self.id = UUID()
+        self.source = source
+        self.timing = timing
 
-        pitch = motion.attitude.pitch
-        roll = motion.attitude.roll
-        yaw = motion.attitude.yaw
+        self.pitch = motion.attitude.pitch
+        self.roll = motion.attitude.roll
+        self.yaw = motion.attitude.yaw
 
-        rotationRateX = motion.rotationRate.x
-        rotationRateY = motion.rotationRate.y
-        rotationRateZ = motion.rotationRate.z
+        self.rotationRateX = motion.rotationRate.x
+        self.rotationRateY = motion.rotationRate.y
+        self.rotationRateZ = motion.rotationRate.z
 
-        accelerationX = motion.userAcceleration.x
-        accelerationY = motion.userAcceleration.y
-        accelerationZ = motion.userAcceleration.z
+        self.accelerationX = motion.userAcceleration.x
+        self.accelerationY = motion.userAcceleration.y
+        self.accelerationZ = motion.userAcceleration.z
+    }
+}
+
+enum MotionSource : String, Codable {
+    case phone
+    case airpods
+}
+
+struct MotionTiming: Codable {
+    let timestamp: Date
+    let timestampEpoch: Int64
+    let deltaTime: TimeInterval
+    let sampleRateHz: Double
+    
+    init(_ timestamp: Date, dt: TimeInterval, hz: Double) {
+        self.timestamp = timestamp
+        self.timestampEpoch = Int64(timestamp.timeIntervalSince1970 * 1000)
+        self.deltaTime = dt
+        self.sampleRateHz = hz
     }
 }

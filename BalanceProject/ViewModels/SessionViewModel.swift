@@ -23,27 +23,27 @@ class SessionViewModel {
     private let phoneMotion = PhoneMotionService()
     
     init() {
-        airpodsMotion.onUpdate = { [weak self] data, hz in
+        airpodsMotion.onUpdate = { [weak self] data, timing in
             guard let self, self.isRecording else { return }
             
-            let datapoint = MotionDatapoint(data, motionSource: .airpods)
+            let datapoint = MotionDatapoint(data, timing: timing, source: .airpods)
             
             Task{ @MainActor in
                 self.currentSession?.addDatapoint(datapoint)
                 self.currentAirpodsData = datapoint
-                self.currentAirpodsHz = hz
+                self.currentAirpodsHz = timing.sampleRateHz
             }
         }
         
-        phoneMotion.onUpdate = { [weak self] data, hz in
+        phoneMotion.onUpdate = { [weak self] data, timing in
             guard let self, self.isRecording else { return }
             
-            let datapoint = MotionDatapoint(data, motionSource: .phone)
+            let datapoint = MotionDatapoint(data, timing: timing, source: .phone)
             
             Task{ @MainActor in
                 self.currentSession?.addDatapoint(datapoint)
                 self.currentPhoneData = datapoint
-                self.currentPhoneHz = hz
+                self.currentPhoneHz = timing.sampleRateHz
             }
         }
     }

@@ -50,7 +50,7 @@ class SessionExportService {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
     
-        encoder.outputFormatting = [.prettyPrinted]
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .formatted(formatter)
         
         do {
@@ -114,7 +114,9 @@ class SessionExportService {
         [
             "source",
             "timestamp",
-            "epochMilliseconds",
+            "timestampEpoch",
+            "deltaTime",
+            "hz",
             "pitch",
             "roll",
             "yaw",
@@ -128,7 +130,7 @@ class SessionExportService {
     }
 
     private func csvRow(from datapoint: MotionDatapoint) -> String {
-        let isoTimestamp = datapoint.timestamp.formatted(.iso8601
+        let isoTimestamp = datapoint.timing.timestamp.formatted(.iso8601
             .year()
             .month()
             .day()
@@ -143,7 +145,9 @@ class SessionExportService {
         return [
             datapoint.source.rawValue,
             isoTimestamp,
-            String(datapoint.epochMilliseconds),
+            String(datapoint.timing.timestampEpoch),
+            datapoint.timing.deltaTime.formatted(toString),
+            datapoint.timing.sampleRateHz.formatted(toString),
             datapoint.pitch.formatted(toString),
             datapoint.roll.formatted(toString),
             datapoint.yaw.formatted(toString),
