@@ -11,9 +11,9 @@ struct MotionDatapoint: Codable, Identifiable {
     let source: MotionSource
     let timing: MotionTiming
 
-    let pitch: Double
-    let roll: Double
-    let yaw: Double
+    let anglePitch: Double
+    let angleRoll: Double
+    let angleYaw: Double
 
     let rotationRateX: Double
     let rotationRateY: Double
@@ -28,9 +28,9 @@ struct MotionDatapoint: Codable, Identifiable {
         self.source = source
         self.timing = timing
 
-        self.pitch = motion.attitude.pitch
-        self.roll = motion.attitude.roll
-        self.yaw = motion.attitude.yaw
+        self.anglePitch = motion.attitude.pitch
+        self.angleRoll = motion.attitude.roll
+        self.angleYaw = motion.attitude.yaw
 
         self.rotationRateX = motion.rotationRate.x
         self.rotationRateY = motion.rotationRate.y

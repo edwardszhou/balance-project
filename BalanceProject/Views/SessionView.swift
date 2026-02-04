@@ -106,9 +106,9 @@ struct MotionDataView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Sample Rate (Hz): \(sampleRate, specifier: "%.1f")")
                         Spacer().frame(maxHeight: 16)
-                        Text("Pitch: \(data.pitch, specifier: "%.3f")")
-                        Text("Roll: \(data.roll, specifier: "%.3f")")
-                        Text("Yaw: \(data.yaw, specifier: "%.3f")")
+                        Text("Pitch: \(data.anglePitch, specifier: "%.3f")")
+                        Text("Roll: \(data.angleRoll, specifier: "%.3f")")
+                        Text("Yaw: \(data.angleYaw, specifier: "%.3f")")
                         Spacer().frame(maxHeight: 16)
                         Text("Rotation Rate X: \(data.rotationRateX, specifier: "%.3f")")
                         Text("Rotation Rate Y: \(data.rotationRateY, specifier: "%.3f")")

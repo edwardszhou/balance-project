@@ -78,9 +78,9 @@ struct MotionGraphView: View {
         datapoints.flatMap { datapoint in
             let t = datapoint.sessionTime(since: session.startDate)
             return [
-                GraphDatapoint(time: t, value: datapoint.pitch, label: "Pitch"),
-                GraphDatapoint(time: t, value: datapoint.roll, label: "Roll"),
-                GraphDatapoint(time: t, value: datapoint.yaw, label: "Yaw")
+                GraphDatapoint(time: t, value: datapoint.anglePitch, label: "Pitch"),
+                GraphDatapoint(time: t, value: datapoint.angleRoll, label: "Roll"),
+                GraphDatapoint(time: t, value: datapoint.angleYaw, label: "Yaw")
             ]
         }
     }
