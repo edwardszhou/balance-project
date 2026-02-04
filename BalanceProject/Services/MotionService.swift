@@ -9,6 +9,11 @@ import CoreMotion
 class MotionService {
     var onUpdate: ((CMDeviceMotion, MotionTiming) -> Void)?
     
+    // Monotonic to world time
+    private var startTimeWorld: Date?
+    private var startTimestamp: TimeInterval?
+    
+    // Sliding window average over dt for sample rate
     private var lastTimestamp: TimeInterval?
     private var lastTimestampDeltas: [TimeInterval] = []
     private let maxDeltas = 10
@@ -26,6 +31,8 @@ class MotionService {
     }
     
     func reset() {
+        startTimeWorld = nil
+        startTimestamp = nil
         lastTimestamp = nil
         lastTimestampDeltas.removeAll()
     }
@@ -33,20 +40,28 @@ class MotionService {
     private func getTiming(_ timestamp: TimeInterval) -> MotionTiming {
         defer { lastTimestamp = timestamp }
         
-        let now = Date()
-        guard let lastTimestamp else { return MotionTiming(now, dt: 0, hz: 0) }
-        let delta = timestamp - lastTimestamp
-        guard delta > 0 else { return MotionTiming(now, dt: 0, hz: 0) }
+        let worldTimestamp = monotonicToWorld(timestamp)
+        guard let lastTimestamp else { return MotionTiming(worldTimestamp, dt: 0, hz: 0) }
         
-        lastTimestampDeltas.append(delta)
+        let dt = timestamp - lastTimestamp
+        guard dt > 0 else { return MotionTiming(worldTimestamp, dt: 0, hz: 0) }
+        
+        lastTimestampDeltas.append(dt)
         if lastTimestampDeltas.count > maxDeltas {
             lastTimestampDeltas.removeFirst()
         }
         
-        let avgDelta = lastTimestampDeltas.reduce(0, +) / Double(lastTimestampDeltas.count)
+        let hz = Double(lastTimestampDeltas.count) / lastTimestampDeltas.reduce(0, +)
 
-        return MotionTiming(now, dt: delta, hz: 1.0 / avgDelta)
-        
-        
+        return MotionTiming(worldTimestamp, dt: dt, hz: hz)
+    }
+    
+    private func monotonicToWorld(_ timestamp: TimeInterval) -> Date {
+        guard let startTimeWorld, let startTimestamp else {
+            startTimeWorld = Date()
+            startTimestamp = timestamp
+            return startTimeWorld!
+        }
+        return startTimeWorld.addingTimeInterval(timestamp - startTimestamp)
     }
 }
