@@ -5,10 +5,12 @@
 
 import Foundation
 import CoreMotion
+import UIKit
 
 struct MotionSession: Codable, Identifiable {
 
     let id: UUID
+    let user: String
     let startDate: Date
     
     var name: String?
@@ -17,10 +19,11 @@ struct MotionSession: Codable, Identifiable {
     var phoneDatapoints: [MotionDatapoint]
 
     init() {
-        id = UUID()
-        startDate = Date()
-        airpodsDatapoints = []
-        phoneDatapoints = []
+        self.id = UUID()
+        self.user = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+        self.startDate = Date()
+        self.airpodsDatapoints = []
+        self.phoneDatapoints = []
     }
     
     mutating func addDatapoint(_ datapoint: MotionDatapoint) {
