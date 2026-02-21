@@ -11,7 +11,7 @@ Using AirPods to detect balance changes.
 
 ### Build Steps: 
 1. Clone the repository from GitHub.
-2. Open the project in Xcode.
+2. Open ios/BalanceProject.xcodeproj in Xcode.
 3. Select your connected iPhone as run destination (top middle of window): \
 `Balance Project > Your iPhone`
 4. Select project in navigator (left sidebar), then find **Targets → Signing & Capabilities**
