@@ -10,9 +10,22 @@
 		D92CDAED2F0DD9AB008414F3 /* BalanceProject.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BalanceProject.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D92CDBF12F4A4ADB008414F3 /* Exceptions for "BalanceProject" folder in "BalanceProject" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D92CDAEC2F0DD9AB008414F3 /* BalanceProject */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D92CDAEF2F0DD9AB008414F3 /* BalanceProject */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D92CDBF12F4A4ADB008414F3 /* Exceptions for "BalanceProject" folder in "BalanceProject" target */,
+			);
 			path = BalanceProject;
 			sourceTree = "<group>";
 		};
