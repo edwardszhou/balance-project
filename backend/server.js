@@ -1,7 +1,7 @@
 import express from "express";
 import { config } from "dotenv";
 import { connectDB } from "./db.js";
-import sessionRoute from "./routes/sessions.js"
+import { appSessionRouter, optitrackSessionRouter } from "./routes.js";
 
 config();
 
@@ -9,9 +9,10 @@ const app = express();
 app.use(express.json());
 
 app.get("/test", async (req, res) => {
-  res.json({ message: "Testing" });
+  res.json({ message: "Status: Healthy" });
 });
-app.use("/sessions", sessionRoute);
+app.use("/app-sessions", appSessionRouter);
+app.use("/optitrack-sessions", optitrackSessionRouter);
 
 const PORT = process.env.PORT || 3000;
 
