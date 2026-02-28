@@ -8,23 +8,28 @@ import Observation
 
 @Observable
 class SessionHistoryViewModel {
-    var sessions: [MotionSession] = []
-    var exportURL: URL?
-    var isPreparingExport = false
-    
+    @MainActor var sessions: [MotionSession] = []
+    @MainActor var exportURL: URL?
+    @MainActor var isPreparingExport = false
     @MainActor var isUploading = false
     
     private let exportService = SessionExportService()
     private let uploadService = SessionUploadService()
     
+    enum SessionExportType {
+        case graph
+        case json
+        case csv
+    }
+    
     func saveSession(_ session: MotionSession) {
         guard session.endDate != nil else { return }
-
-        sessions.insert(session, at: 0)
         
-        Task { [weak self] in
+        sessions.insert(session, at: 0)
+        isUploading = true
+        
+        Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
-            await MainActor.run { self.isUploading = true }
             do {
                 try await self.uploadService.uploadJSON(session)
             } catch {
@@ -33,30 +38,25 @@ class SessionHistoryViewModel {
             await MainActor.run { self.isUploading = false }
         }
     }
-    
-    enum SessionExportType {
-        case graph
-        case json
-        case csv
-    }
+
     
     func prepareExport(_ session: MotionSession, type: SessionExportType = .json) {
         isPreparingExport = true
         
-        // Run on a background thread so the UI doesn't freeze
-        DispatchQueue.global(qos: .userInitiated).async {
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            
             let url: URL?
             switch type {
             case .json:
-                url = self.exportService.exportToJSON(session)
+                url = await self.exportService.exportToJSON(session)
             case .graph:
-                url = self.exportService.exportGraph(session)
+                url = await self.exportService.exportGraph(session)
             case .csv:
-                url = self.exportService.exportToCSV(session)
+                url = await self.exportService.exportToCSV(session)
             }
             
-
-            DispatchQueue.main.async {
+            await MainActor.run {
                 self.exportURL = url
                 self.isPreparingExport = false
             }
