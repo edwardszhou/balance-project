@@ -12,10 +12,26 @@ class SessionHistoryViewModel {
     var exportURL: URL?
     var isPreparingExport = false
     
-    private let exportService = SessionExportService()
+    @MainActor var isUploading = false
     
-    func addSession (_ session: MotionSession) {
+    private let exportService = SessionExportService()
+    private let uploadService = SessionUploadService()
+    
+    func saveSession(_ session: MotionSession) {
+        guard session.endDate != nil else { return }
+
         sessions.insert(session, at: 0)
+        
+        Task { [weak self] in
+            guard let self else { return }
+            await MainActor.run { self.isUploading = true }
+            do {
+                try await self.uploadService.uploadJSON(session)
+            } catch {
+                print("Failed to upload session: \(error)")
+            }
+            await MainActor.run { self.isUploading = false }
+        }
     }
     
     enum SessionExportType {
@@ -47,3 +63,4 @@ class SessionHistoryViewModel {
         }
     }
 }
+

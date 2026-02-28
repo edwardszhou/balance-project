@@ -43,18 +43,8 @@ class SessionExportService {
             return nil
         }
         
-        let encoder = JSONEncoder()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-        formatter.calendar = Calendar(identifier: .iso8601)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-    
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .formatted(formatter)
-        
         do {
-            let data = try encoder.encode(session)
+            let data = try encodeSessionJSON(session)
             let fileUrl = getFileUrl(session, fileType: "json")
             try data.write(to: fileUrl, options: .atomic)
             
@@ -160,4 +150,17 @@ class SessionExportService {
         ].joined(separator: ",")
     }
 
+}
+
+func encodeSessionJSON(_ session: MotionSession) throws -> Data {
+    let encoder = JSONEncoder()
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+    formatter.calendar = Calendar(identifier: .iso8601)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    encoder.dateEncodingStrategy = .formatted(formatter)
+    return try encoder.encode(session)
 }

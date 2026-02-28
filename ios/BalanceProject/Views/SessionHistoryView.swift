@@ -17,6 +17,13 @@ struct SessionHistoryView: View {
     
     var body: some View {
         List {
+            if viewModel.isUploading {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("Uploading session…")
+                        .foregroundStyle(.secondary)
+                }
+            }
             if viewModel.sessions.isEmpty {
                 ContentUnavailableView("No sessions recorded", systemImage: "clock")
             }

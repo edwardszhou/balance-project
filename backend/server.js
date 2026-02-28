@@ -6,7 +6,7 @@ import { appSessionRouter, optitrackSessionRouter } from "./routes.js";
 config();
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 
 app.get("/test", async (req, res) => {
   res.json({ message: "Status: Healthy" });

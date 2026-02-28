@@ -74,8 +74,7 @@ struct SessionView: View {
             Button("Save") {
                 var session = pendingSession!
                 session.name = sessionName
-                historyViewModel.addSession(session)
-                
+                historyViewModel.saveSession(session)
                 sessionName = ""
                 pendingSession = nil
             }
