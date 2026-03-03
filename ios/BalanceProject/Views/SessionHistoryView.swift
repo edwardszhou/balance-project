@@ -21,7 +21,8 @@ struct SessionHistoryView: View {
             }
             
             ForEach(sessions) { session in
-                DisclosureGroup(
+                SessionRowView(
+                    session: session,
                     isExpanded: Binding(
                         get: { expandedSessions.contains(session.id) },
                         set: { newValue in
@@ -34,74 +35,7 @@ struct SessionHistoryView: View {
                             }
                         }
                     ),
-                ) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("AirPods Samples: \(session.airpodsDatapoints.count)")
-                        Text("Phone Samples: \(session.phoneDatapoints.count)")
-                        Text("Duration: \(formatDuration(session.startDate, session.endDate))")
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.leading, -16)
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack{
-                                Text(session.name ?? "Untitled")
-                                    .font(.headline)
-                                if session.isUploaded {
-                                    Image(systemName: "checkmark.circle")
-                                        .resizable()
-                                        .frame(width: 14, height: 14)
-                                        .foregroundStyle(.green)
-                                } else {
-                                    Button {
-                                        viewModel.uploadSession(session)
-                                    } label: {
-                                        Image(systemName: "exclamationmark.circle")
-                                            .resizable()
-                                            .frame(width: 14, height: 14)
-                                            .foregroundStyle(.red)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            Text(session.isUploaded ? "Uploaded" : viewModel.sessionToUpload == session ? "Retrying upload..." : "Failed to upload")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text(session.startDate.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        VStack {
-                            Button {
-                                viewModel.sessionToExport = session
-                            } label: {
-                                Image(systemName: "square.and.arrow.up")
-                            }
-                            .buttonStyle(.bordered)
-                            .buttonBorderShape(.circle)
-                            .padding(.trailing, 8)
-                            .disabled(viewModel.sessionToExport != nil)
-                            .confirmationDialog(
-                                "Select Export Format",
-                                isPresented: Binding(
-                                    get: { viewModel.sessionToExport == session && viewModel.sessionToExport != nil },
-                                    set: { if !$0 { viewModel.sessionToExport = nil } }
-                                ),
-                                titleVisibility: .visible
-                            ) {
-                                Button("JSON") { viewModel.prepareExport(type: .json) }
-                                Button("CSV") { viewModel.prepareExport(type: .csv) }
-                                Button("Graph") { viewModel.prepareExport(type: .graph) }
-                                Button("Cancel", role: .cancel) {}
-                            }
-                        }
-                    }
-                }
-                .listRowSeparator(
-                    expandedSessions.contains(session.id) ? .hidden : .visible
+                    viewModel: viewModel
                 )
             }
         }
@@ -117,6 +51,63 @@ struct SessionHistoryView: View {
         }
         .navigationTitle("Session History")
     }
+}
+
+struct SessionRowView: View {
+    let session: MotionSession
+    
+    @Binding var isExpanded: Bool
+    var viewModel: SessionHistoryViewModel
+    
+    var body: some View {
+        DisclosureGroup(
+            isExpanded: $isExpanded
+        ) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("AirPods Samples: \(session.airpodsDatapoints.count)")
+                Text("Phone Samples: \(session.phoneDatapoints.count)")
+                Text("Duration: \(formatDuration(session.startDate, session.endDate))")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.leading, -16)
+        } label: {
+            HStack {
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text(session.name ?? "Untitled")
+                            .font(.headline)
+                        if session.isUploaded {
+                            Image(systemName: "checkmark.circle")
+                                .resizable()
+                                .frame(width: 14, height: 14)
+                                .foregroundStyle(.green)
+                        } else {
+                            Button {
+                                viewModel.uploadSession(session)
+                            } label: {
+                                Image(systemName: "exclamationmark.circle")
+                                    .resizable()
+                                    .frame(width: 14, height: 14)
+                                    .foregroundStyle(.red)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    Text(session.isUploaded ? "Uploaded" : viewModel.sessionToUpload == session ? "Retrying upload..." : "Failed to upload")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(session.startDate.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                SessionExportButton(session: session, viewModel: viewModel)
+            }
+            .padding(.vertical, 4)
+        }
+        .listRowSeparator(isExpanded ? .hidden : .visible)
+    }
     
     private func formatDuration(_ start: Date, _ end: Date?) -> String {
         guard let end = end else { return "Unknown" }
@@ -124,6 +115,34 @@ struct SessionHistoryView: View {
         let minutes = interval / 60
         let seconds = interval % 60
         return "\(minutes)m \(seconds)s"
+    }
+}
+
+struct SessionExportButton: View {
+    let session: MotionSession
+    var viewModel: SessionHistoryViewModel
+    
+    var body: some View {
+        Button {
+            viewModel.sessionToExport = session
+        } label: {
+            Image(systemName: "square.and.arrow.up")
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+        .disabled(viewModel.sessionToExport != nil)
+        .confirmationDialog(
+            "Select Export Format",
+            isPresented: Binding(
+                get: { viewModel.sessionToExport == session },
+                set: { if !$0 { viewModel.sessionToExport = nil } }
+            )
+        ) {
+            Button("JSON") { viewModel.prepareExport(type: .json) }
+            Button("CSV") { viewModel.prepareExport(type: .csv) }
+            Button("Graph") { viewModel.prepareExport(type: .graph) }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 }
 

@@ -18,9 +18,14 @@ struct SessionView: View {
     var body: some View {
         NavigationStack {
             VStack {
-                Text("Balance Project")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(.primary)
+                LinearGradient(
+                    colors: [.blue, .teal],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ).mask(
+                    Text("TrueBalance")
+                        .font(.system(size: 36, weight: .bold))
+                ).frame(maxHeight: 80)
             }
             .padding(24)
             .toolbar {

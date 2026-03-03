@@ -6,10 +6,13 @@
 import Foundation
 import CoreMotion
 import Observation
+import SwiftUI
 
 @Observable
 @MainActor
 class SessionViewModel {
+    @ObservationIgnored @AppStorage("userName") private var userName = ""
+    
     var currentSession: MotionSession?
     
     var currentAirpodsData: MotionDatapoint?
@@ -53,7 +56,7 @@ class SessionViewModel {
     func startSession() {
         guard !isRecording else { return }
         
-        currentSession = MotionSession()
+        currentSession = MotionSession(userName: userName)
         airpodsMotion.startTracking()
         phoneMotion.startTracking()
 

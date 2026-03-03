@@ -12,7 +12,8 @@ import UIKit
 class MotionSession {
 
     @Attribute(.unique) var id: UUID = UUID()
-    var user: String = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+    var userId: String = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+    var userName: String = "unknown"
     var startDate: Date = Date()
     
     var name: String?
@@ -21,7 +22,9 @@ class MotionSession {
     var airpodsDatapoints: [MotionDatapoint] = []
     var phoneDatapoints: [MotionDatapoint] = []
 
-    init() { }
+    init(userName: String) {
+        self.userName = userName
+    }
     
     func addDatapoint(_ datapoint: MotionDatapoint) {
         switch datapoint.source {
@@ -39,9 +42,10 @@ class MotionSession {
         
         return MotionSessionDTO(
             id: id,
-            user: user,
-            startDate: startDate,
             name: name,
+            userId: userId,
+            userName: userName,
+            startDate: startDate,
             endDate: endDate,
             airpodsDatapoints: airpodsDatapoints,
             phoneDatapoints: phoneDatapoints
@@ -51,9 +55,10 @@ class MotionSession {
 
 struct MotionSessionDTO: Codable {
     let id: UUID
-    let user: String
-    let startDate: Date
     let name: String
+    let userId: String
+    let userName: String
+    let startDate: Date
     let endDate: Date
     let airpodsDatapoints: [MotionDatapoint]
     let phoneDatapoints: [MotionDatapoint]
