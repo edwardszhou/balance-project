@@ -11,6 +11,7 @@ class SessionHistoryViewModel {
     @MainActor var sessions: [MotionSession] = []
     @MainActor var exportURL: URL?
     @MainActor var sessionToExport: MotionSession?
+    @MainActor var sessionToUpload: MotionSession?
     
     private let exportService = SessionExportService()
     private let uploadService = SessionUploadService()
@@ -41,6 +42,20 @@ class SessionHistoryViewModel {
                 self.exportURL = url
                 self.sessionToExport = nil
             }
+        }
+    }
+    
+    func uploadSession(_ session: MotionSession) {
+        self.sessionToUpload = session
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.uploadService.uploadJSON(session)
+                session.isUploaded = true
+            } catch {
+                print("Failed to upload session: \(error)")
+            }
+            await MainActor.run { self.sessionToUpload = nil }
         }
     }
 }
