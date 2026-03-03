@@ -41,11 +41,11 @@ function createGetRoute(collection) {
 }
 
 const appSessionRouter = express.Router();
-appSessionRouter.get("/", createGetRoute("appsessions"));
-appSessionRouter.post("/", createPostRoute("appsessions"));
+appSessionRouter.get("/", createGetRoute("app-sessions"));
+appSessionRouter.post("/", createPostRoute("app-sessions"));
 
 const optitrackSessionRouter = express.Router();
-optitrackSessionRouter.get("/", createGetRoute("optitracksessions"));
-optitrackSessionRouter.post("/", createPostRoute("optitracksessions"));
+optitrackSessionRouter.get("/", createGetRoute("optitrack-sessions"));
+optitrackSessionRouter.post("/", createPostRoute("optitrack-sessions"));
 
 export { appSessionRouter, optitrackSessionRouter };

@@ -5,35 +5,56 @@
 
 import Foundation
 import CoreMotion
+import SwiftData
 import UIKit
 
-struct MotionSession: Codable, Identifiable {
+@Model
+class MotionSession {
 
-    let id: UUID
-    let user: String
-    let startDate: Date
+    @Attribute(.unique) var id: UUID = UUID()
+    var user: String = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+    var startDate: Date = Date()
     
     var name: String?
     var endDate: Date?
-    var airpodsDatapoints: [MotionDatapoint]
-    var phoneDatapoints: [MotionDatapoint]
+    var isUploaded: Bool = false
+    var airpodsDatapoints: [MotionDatapoint] = []
+    var phoneDatapoints: [MotionDatapoint] = []
 
-    init() {
-        self.id = UUID()
-        self.user = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
-        self.startDate = Date()
-        self.airpodsDatapoints = []
-        self.phoneDatapoints = []
-    }
+    init() { }
     
-    mutating func addDatapoint(_ datapoint: MotionDatapoint) {
+    func addDatapoint(_ datapoint: MotionDatapoint) {
         switch datapoint.source {
         case .airpods: airpodsDatapoints.append(datapoint)
         case .phone: phoneDatapoints.append(datapoint)
         }
     }
     
-    mutating func end() {
+    func end() {
         endDate = Date()
     }
+    
+    func exportDTO() -> MotionSessionDTO {
+        guard let endDate, let name else { fatalError("Session not yet ended") }
+        
+        return MotionSessionDTO(
+            id: id,
+            user: user,
+            startDate: startDate,
+            name: name,
+            endDate: endDate,
+            airpodsDatapoints: airpodsDatapoints,
+            phoneDatapoints: phoneDatapoints
+        )
+    }
+}
+
+struct MotionSessionDTO: Codable {
+    let id: UUID
+    let user: String
+    let startDate: Date
+    let name: String
+    let endDate: Date
+    let airpodsDatapoints: [MotionDatapoint]
+    let phoneDatapoints: [MotionDatapoint]
 }

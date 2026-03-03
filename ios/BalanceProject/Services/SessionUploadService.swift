@@ -25,8 +25,6 @@ class SessionUploadService {
         
         guard let httpResponse = response as? HTTPURLResponse,
               200..<300 ~= httpResponse.statusCode else {
-            print((response as! HTTPURLResponse).statusCode)
-            print(response)
             throw URLError(.badServerResponse)
         }
     }

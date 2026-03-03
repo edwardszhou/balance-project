@@ -4,11 +4,12 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SessionView: View {
+    @Environment(\.modelContext) private var context
 
-    @State private var sessionViewModel = SessionViewModel()
-    @State private var historyViewModel = SessionHistoryViewModel()
+    @State private var viewModel = SessionViewModel()
     
     @State private var showNamePrompt = false
     @State private var pendingSession: MotionSession?
@@ -24,7 +25,7 @@ struct SessionView: View {
             .padding(24)
             .toolbar {
                 NavigationLink("History") {
-                    SessionHistoryView(viewModel: historyViewModel)
+                    SessionHistoryView()
                 }
             }
             Spacer()
@@ -32,32 +33,32 @@ struct SessionView: View {
                 MotionDataView(
                     title: "Airpods Motion",
                     imageSystemName: "airpodspro",
-                    isRecording: sessionViewModel.isRecording,
-                    data: sessionViewModel.currentAirpodsData,
-                    sampleRate: sessionViewModel.currentAirpodsHz
+                    isRecording: viewModel.isRecording,
+                    data: viewModel.currentAirpodsData,
+                    sampleRate: viewModel.currentAirpodsHz
                 )
                 MotionDataView(
                     title: "iPhone Motion",
                     imageSystemName: "iphone.motion",
-                    isRecording: sessionViewModel.isRecording,
-                    data: sessionViewModel.currentPhoneData,
-                    sampleRate: sessionViewModel.currentPhoneHz
+                    isRecording: viewModel.isRecording,
+                    data: viewModel.currentPhoneData,
+                    sampleRate: viewModel.currentPhoneHz
                 )
             }
             .tabViewStyle(.page)
             .frame(maxHeight: .infinity)
             Spacer()
             HStack{
-                if !sessionViewModel.isRecording {
+                if !viewModel.isRecording {
                     Button {
-                        sessionViewModel.startSession()
+                        viewModel.startSession()
                     } label: {
                         Text("Start Session")
                     }
                     .buttonStyle(.borderedProminent)
                 } else {
                     Button(role: .cancel) {
-                        if let session = sessionViewModel.endSession() {
+                        if let session = viewModel.endSession() {
                             pendingSession = session
                             showNamePrompt = true
                         }
@@ -72,9 +73,16 @@ struct SessionView: View {
         .alert("Name Session", isPresented: $showNamePrompt) {
             TextField("Name", text: $sessionName)
             Button("Save") {
-                var session = pendingSession!
+                guard let session = pendingSession else { return }
                 session.name = sessionName
-                historyViewModel.saveSession(session)
+                
+                context.insert(session)
+                viewModel.uploadSession(session)
+                    
+                sessionName = ""
+                pendingSession = nil
+            }
+            Button("Cancel", role: .cancel) {
                 sessionName = ""
                 pendingSession = nil
             }

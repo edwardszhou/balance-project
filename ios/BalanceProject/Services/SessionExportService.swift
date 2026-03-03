@@ -153,6 +153,8 @@ class SessionExportService {
 }
 
 func encodeSessionJSON(_ session: MotionSession) throws -> Data {
+    let sessionDTO = session.exportDTO()
+    
     let encoder = JSONEncoder()
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
@@ -162,5 +164,5 @@ func encodeSessionJSON(_ session: MotionSession) throws -> Data {
 
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     encoder.dateEncodingStrategy = .formatted(formatter)
-    return try encoder.encode(session)
+    return try encoder.encode(sessionDTO)
 }

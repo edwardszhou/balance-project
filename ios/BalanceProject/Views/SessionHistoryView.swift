@@ -4,10 +4,14 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SessionHistoryView: View {
     
-    @Bindable var viewModel: SessionHistoryViewModel
+    @Query(sort: \MotionSession.startDate, order: .reverse)
+    var sessions: [MotionSession]
+    
+    @State private var viewModel = SessionHistoryViewModel()
     
     private let exportActions: [(SessionHistoryViewModel.SessionExportType, String)] = [
         (.json, "square.and.arrow.up"),
@@ -24,11 +28,11 @@ struct SessionHistoryView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            if viewModel.sessions.isEmpty {
+            if sessions.isEmpty {
                 ContentUnavailableView("No sessions recorded", systemImage: "clock")
             }
 
-            ForEach(viewModel.sessions) { session in
+            ForEach(sessions) { session in
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         if let name = session.name {

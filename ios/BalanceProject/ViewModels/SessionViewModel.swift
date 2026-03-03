@@ -19,6 +19,8 @@ class SessionViewModel {
     
     var isRecording: Bool = false
     
+    private let uploadService = SessionUploadService()
+    
     private let airpodsMotion = AirpodsMotionService()
     private let phoneMotion = PhoneMotionService()
     
@@ -58,7 +60,7 @@ class SessionViewModel {
         isRecording = true
     }
     func endSession() -> MotionSession? {
-        guard isRecording, var session = currentSession else { return nil }
+        guard isRecording, let session = currentSession else { return nil }
         
         airpodsMotion.stopTracking()
         phoneMotion.stopTracking()
@@ -70,5 +72,17 @@ class SessionViewModel {
         isRecording = false
         
         return session
+    }
+    
+    func uploadSession(_ session: MotionSession) {
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.uploadService.uploadJSON(session)
+                session.isUploaded = true
+            } catch {
+                print("Failed to upload session: \(error)")
+            }
+        }
     }
 }
