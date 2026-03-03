@@ -10,8 +10,7 @@ import Observation
 class SessionHistoryViewModel {
     @MainActor var sessions: [MotionSession] = []
     @MainActor var exportURL: URL?
-    @MainActor var isPreparingExport = false
-    @MainActor var isUploading = false
+    @MainActor var sessionToExport: MotionSession?
     
     private let exportService = SessionExportService()
     private let uploadService = SessionUploadService()
@@ -22,8 +21,8 @@ class SessionHistoryViewModel {
         case csv
     }
     
-    func prepareExport(_ session: MotionSession, type: SessionExportType = .json) {
-        isPreparingExport = true
+    func prepareExport(type: SessionExportType = .json) {
+        guard let sessionToExport else { return }
         
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
@@ -31,16 +30,16 @@ class SessionHistoryViewModel {
             let url: URL?
             switch type {
             case .json:
-                url = await self.exportService.exportToJSON(session)
+                url = await self.exportService.exportToJSON(sessionToExport)
             case .graph:
-                url = await self.exportService.exportGraph(session)
+                url = await self.exportService.exportGraph(sessionToExport)
             case .csv:
-                url = await self.exportService.exportToCSV(session)
+                url = await self.exportService.exportToCSV(sessionToExport)
             }
             
             await MainActor.run {
                 self.exportURL = url
-                self.isPreparingExport = false
+                self.sessionToExport = nil
             }
         }
     }

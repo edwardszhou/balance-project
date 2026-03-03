@@ -13,25 +13,12 @@ struct SessionHistoryView: View {
     
     @State private var viewModel = SessionHistoryViewModel()
     
-    private let exportActions: [(SessionHistoryViewModel.SessionExportType, String)] = [
-        (.json, "square.and.arrow.up"),
-        (.csv, "tablecells"),
-        (.graph, "chart.xyaxis.line"),
-    ]
-    
     var body: some View {
         List {
-            if viewModel.isUploading {
-                HStack(spacing: 8) {
-                    ProgressView()
-                    Text("Uploading session…")
-                        .foregroundStyle(.secondary)
-                }
-            }
             if sessions.isEmpty {
                 ContentUnavailableView("No sessions recorded", systemImage: "clock")
             }
-
+            
             ForEach(sessions) { session in
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
@@ -56,14 +43,37 @@ struct SessionHistoryView: View {
                     .padding(.vertical, 4)
                     Spacer()
                     HStack(spacing: 8) {
-                        ForEach(exportActions, id: \.0) { type, systemImage in
+                        if session.isUploaded {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        } else {
                             Button {
-                                viewModel.prepareExport(session, type: type)
+                                
                             } label: {
-                                Image(systemName: systemImage)
+                                Image(systemName: "arrow.triangle.2.circlepath.circle")
                             }
                             .buttonStyle(.bordered)
-                            .disabled(viewModel.isPreparingExport)
+                            .disabled(viewModel.sessionToExport != nil)
+                        }
+                        Button {
+                            viewModel.sessionToExport = session
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(viewModel.sessionToExport != nil)
+                        .confirmationDialog(
+                            "Select Export Format",
+                            isPresented: Binding(
+                                get: { viewModel.sessionToExport == session && viewModel.sessionToExport != nil },
+                                set: { if !$0 { viewModel.sessionToExport = nil } }
+                            ),
+                            titleVisibility: .visible
+                        ) {
+                            Button("JSON") { viewModel.prepareExport(type: .json) }
+                            Button("CSV") { viewModel.prepareExport(type: .csv) }
+                            Button("Graph") { viewModel.prepareExport(type: .graph) }
+                            Button("Cancel", role: .cancel) {}
                         }
                     }
                 }
