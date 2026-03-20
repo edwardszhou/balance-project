@@ -22,11 +22,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def normalize_time(t):
-    t = np.array(t)
-    return t - t[0]
-
-
 def unwrap_euler(euler_deg):
     return np.degrees(np.unwrap(np.radians(euler_deg), axis=0))
 
@@ -55,6 +50,36 @@ def interpolate_rotations(rot_src, time_src, time_target):
     return R.from_matrix(np.array(rot_reconstructed))
 
 
+def angular_velocity_magnitude(rot, time):
+    dt = np.diff(time)
+    rel = rot[:-1].inv() * rot[1:]
+    angles = rel.magnitude()
+    omega = np.degrees(angles / dt)
+    return np.append(omega, omega[-1])
+
+
+def estimate_time_offset(time_a, rot_a, time_b, rot_b):
+    sig_a = angular_velocity_magnitude(rot_a, time_a)
+    sig_b = angular_velocity_magnitude(rot_b, time_b)
+
+    dt = np.median(np.diff(time_a))
+    t_start = max(time_a[0], time_b[0])
+    t_end = min(time_a[-1], time_b[-1])
+    t_grid = np.arange(t_start, t_end, dt)
+
+    sa = np.interp(t_grid, time_a, sig_a)
+    sb = np.interp(t_grid, time_b, sig_b)
+    sa -= sa.mean()
+    sb -= sb.mean()
+
+    corr = np.correlate(sa, sb, mode="full")
+    lags = np.arange(-(len(t_grid) - 1), len(t_grid)) * dt
+
+    mask = np.abs(lags) <= 1000
+    best_lag = lags[mask][np.argmax(corr[mask])]
+    return best_lag
+
+
 if __name__ == "__main__":
     args = parse_args()
     try:
@@ -73,13 +98,25 @@ if __name__ == "__main__":
 
     df_app = df_app.loc[df_app["source"] == "airpods"]
 
-    time_opti = df_opti["timestampEpoch"].values - OPTI_TIME_OFFSET
+    time_opti = df_opti["timestampEpoch"].values
     time_app = df_app["timestampEpoch"].values
 
     rot_opti = R.from_quat(df_opti[["quatX", "quatY", "quatZ", "quatW"]].values)
     rot_app = R.from_euler(
         "xyz", df_app[["angle_pitch", "angle_roll", "angle_yaw"]].values
     )
+
+    # Align times
+    euler_opti_raw = rot_opti.as_euler("xyz", degrees=True)
+    euler_app_raw = rot_app.as_euler("xyz", degrees=True)
+    TIME_ALIGN_AXIS = 0
+    offset = estimate_time_offset(
+        time_app,
+        rot_app,
+        time_opti,
+        rot_opti,
+    )
+    time_opti = time_opti + offset
 
     # Mask to get overlapping time only
     time_start = max(time_opti[0], time_app[0])
@@ -122,22 +159,22 @@ if __name__ == "__main__":
 
     fig, axes = plt.subplots(3, 1, sharex=True)
 
-    axes[0].plot(time_opti, pitch_o, label="Pitch (optitrack)")
-    axes[0].plot(time_opti, pitch_oc, label="Pitch (optitrackC)")
+    axes[0].plot(time_opti, pitch_o, label="Pitch (optitrack, raw)")
+    axes[0].plot(time_opti, pitch_oc, label="Pitch (optitrack, corrected)")
     axes[0].plot(time_app, pitch_a, linestyle="--", label="Pitch (airpods)")
     axes[0].set_ylabel("Pitch")
     axes[0].legend()
     axes[0].grid(True)
 
-    axes[1].plot(time_opti, roll_o, label="Roll (optitrack)")
-    axes[1].plot(time_opti, roll_oc, label="Roll (optitrackC)")
+    axes[1].plot(time_opti, roll_o, label="Roll (optitrack, raw)")
+    axes[1].plot(time_opti, roll_oc, label="Roll (optitrack, corrected)")
     axes[1].plot(time_app, roll_a, linestyle="--", label="Roll (airpods)")
     axes[1].set_ylabel("Roll")
     axes[1].legend()
     axes[1].grid(True)
 
-    axes[2].plot(time_opti, yaw_o, label="Yaw (optitrack)")
-    axes[2].plot(time_opti, yaw_oc, label="Yaw (optitrackC)")
+    axes[2].plot(time_opti, yaw_o, label="Yaw (optitrack, raw)")
+    axes[2].plot(time_opti, yaw_oc, label="Yaw (optitrack, corrected)")
     axes[2].plot(time_app, yaw_a, linestyle="--", label="Yaw (airpods)")
     axes[2].set_ylabel("Yaw")
     axes[2].set_xlabel("Timestamp")
