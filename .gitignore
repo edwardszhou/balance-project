@@ -147,3 +147,6 @@ build/
 *.tmp
 .cache/
 INSIGHTFLOW_FILE_PATHS.txt
+
+.data/
+*.csv
