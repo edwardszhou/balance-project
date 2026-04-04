@@ -13,9 +13,11 @@ struct SessionHistoryView: View {
     
     @State private var viewModel = SessionHistoryViewModel()
     @State private var expandedSessions: Set<UUID> = []
+    @State private var selectedSessions: Set<UUID> = []
+    @Environment(\.editMode) private var editMode
     
     var body: some View {
-        List {
+        List(selection: $selectedSessions) {
             if sessions.isEmpty {
                 ContentUnavailableView("No sessions recorded", systemImage: "clock")
             }
@@ -23,6 +25,7 @@ struct SessionHistoryView: View {
             ForEach(sessions) { session in
                 SessionRowView(
                     session: session,
+                    isEditing: editMode?.wrappedValue == .active,
                     isExpanded: Binding(
                         get: { expandedSessions.contains(session.id) },
                         set: { newValue in
@@ -37,6 +40,8 @@ struct SessionHistoryView: View {
                     ),
                     viewModel: viewModel
                 )
+                .tag(session.id)
+                .selectionDisabled(editMode?.wrappedValue != .active)
             }
         }
         .sheet(item: $viewModel.exportURL) { url in
@@ -50,12 +55,30 @@ struct SessionHistoryView: View {
             .presentationDetents([.height(200)])
         }
         .navigationTitle("Session History")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                EditButton()
+            }
+            ToolbarItemGroup(placement: .bottomBar) {
+                if editMode?.wrappedValue == .active && selectedSessions.count > 0 {
+                    Spacer()
+                    Button("Export \(selectedSessions.count) sessions") {
+                        let sessionsToExport = sessions.filter {
+                            selectedSessions.contains($0.id)
+                        }
+                        //                            viewModel.prepareBulkExport(sessionsToExport)
+                    }
+                    
+                }
+                
+            }
+        }
     }
 }
 
 struct SessionRowView: View {
     let session: MotionSession
-    
+    var isEditing: Bool
     @Binding var isExpanded: Bool
     var viewModel: SessionHistoryViewModel
     
@@ -71,6 +94,7 @@ struct SessionRowView: View {
             .font(.caption)
             .foregroundStyle(.secondary)
             .padding(.leading, -16)
+            .selectionDisabled(true)
         } label: {
             HStack {
                 VStack(alignment: .leading) {
@@ -102,7 +126,7 @@ struct SessionRowView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                SessionExportButton(session: session, viewModel: viewModel)
+                SessionExportButton(session: session, viewModel: viewModel, isEditing: isEditing)
             }
             .padding(.vertical, 4)
         }
@@ -121,6 +145,7 @@ struct SessionRowView: View {
 struct SessionExportButton: View {
     let session: MotionSession
     var viewModel: SessionHistoryViewModel
+    var isEditing: Bool
     
     var body: some View {
         Button {
@@ -130,7 +155,7 @@ struct SessionExportButton: View {
         }
         .buttonStyle(.bordered)
         .buttonBorderShape(.circle)
-        .disabled(viewModel.sessionToExport != nil)
+        .disabled(isEditing || viewModel.sessionToExport != nil)
         .confirmationDialog(
             "Select Export Format",
             isPresented: Binding(
