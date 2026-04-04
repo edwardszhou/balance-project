@@ -91,13 +91,28 @@ class SessionExportService {
         
         let filename: String
         if let name = session.name, !name.isEmpty {
-            filename = "\(name)-\(session.id.uuidString)"
+            filename = sanitizeFileName(name)
         } else {
-            filename = "motion-session-\(session.id.uuidString)"
+            filename = "motion-session"
         }
         return directory
             .appendingPathComponent(filename)
             .appendingPathExtension(fileType)
+    }
+    
+    private func sanitizeFileName(_ name: String) -> String {
+        var newName = name
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+        newName = newName.unicodeScalars
+            .map { allowed.contains($0) ? Character($0) : "-" }
+            .map { String($0) }
+            .joined()
+        
+        while newName.contains("--") {
+            newName = newName.replacingOccurrences(of: "--", with: "-")
+        }
+        newName = newName.trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        return newName.isEmpty ? "motion-session" : newName
     }
     
     private func csvHeader() -> String {
