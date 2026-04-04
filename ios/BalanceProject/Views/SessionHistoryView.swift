@@ -44,6 +44,31 @@ struct SessionHistoryView: View {
                 .selectionDisabled(editMode?.wrappedValue != .active)
             }
         }
+        .navigationTitle("Session History")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                EditButton()
+            }
+            ToolbarItemGroup(placement: .bottomBar) {
+                if editMode?.wrappedValue == .active && selectedSessions.count > 0 {
+                    Spacer()
+                    Menu("Export \(selectedSessions.count) sessions ") {
+                        Button("Graph") {
+                            let sessionsToExport = sessions.filter { selectedSessions.contains($0.id) }
+                            viewModel.prepareBulkExport(sessions: sessionsToExport, type: .graph)
+                        }
+                        Button("CSV") {
+                            let sessionsToExport = sessions.filter { selectedSessions.contains($0.id) }
+                            viewModel.prepareBulkExport(sessions: sessionsToExport, type: .csv)
+                        }
+                        Button("JSON") {
+                            let sessionsToExport = sessions.filter { selectedSessions.contains($0.id) }
+                            viewModel.prepareBulkExport(sessions: sessionsToExport, type: .json)
+                        }
+                    }
+                }
+            }
+        }
         .sheet(item: $viewModel.exportURL) { url in
             VStack(spacing: 20) {
                 Text("File Ready")
@@ -54,24 +79,18 @@ struct SessionHistoryView: View {
             }
             .presentationDetents([.height(200)])
         }
-        .navigationTitle("Session History")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                EditButton()
+        .sheet(isPresented: Binding(
+            get: { !viewModel.bulkExportURLs.isEmpty },
+            set: { if !$0 { viewModel.bulkExportURLs = [] } }
+        )) {
+            VStack(spacing: 20) {
+                Text("Files Ready")
+                    .font(.headline)
+                ShareLink("Save \(viewModel.bulkExportURLs.count) Sessions", items: viewModel.bulkExportURLs)
+                    .controlSize(.large)
+                    .buttonStyle(.borderedProminent)
             }
-            ToolbarItemGroup(placement: .bottomBar) {
-                if editMode?.wrappedValue == .active && selectedSessions.count > 0 {
-                    Spacer()
-                    Button("Export \(selectedSessions.count) sessions") {
-                        let sessionsToExport = sessions.filter {
-                            selectedSessions.contains($0.id)
-                        }
-                        //                            viewModel.prepareBulkExport(sessionsToExport)
-                    }
-                    
-                }
-                
-            }
+            .presentationDetents([.height(200)])
         }
     }
 }
@@ -147,25 +166,24 @@ struct SessionExportButton: View {
     var viewModel: SessionHistoryViewModel
     var isEditing: Bool
     
+    @State private var isExporting = false
+    
     var body: some View {
         Button {
-            viewModel.sessionToExport = session
+            isExporting = true
         } label: {
             Image(systemName: "square.and.arrow.up")
         }
         .buttonStyle(.bordered)
         .buttonBorderShape(.circle)
-        .disabled(isEditing || viewModel.sessionToExport != nil)
+        .disabled(isEditing)
         .confirmationDialog(
             "Select Export Format",
-            isPresented: Binding(
-                get: { viewModel.sessionToExport == session },
-                set: { if !$0 { viewModel.sessionToExport = nil } }
-            )
+            isPresented: $isExporting
         ) {
-            Button("JSON") { viewModel.prepareExport(type: .json) }
-            Button("CSV") { viewModel.prepareExport(type: .csv) }
-            Button("Graph") { viewModel.prepareExport(type: .graph) }
+            Button("JSON") { viewModel.prepareExport(session: session, type: .json) }
+            Button("CSV") { viewModel.prepareExport(session: session, type: .csv) }
+            Button("Graph") { viewModel.prepareExport(session: session, type: .graph) }
             Button("Cancel", role: .cancel) {}
         }
     }
