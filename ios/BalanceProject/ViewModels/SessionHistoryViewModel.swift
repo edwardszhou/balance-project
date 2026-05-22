@@ -71,7 +71,9 @@ class SessionHistoryViewModel {
             guard let self else { return }
             do {
                 try await self.uploadService.uploadJSON(session)
-                session.isUploaded = true
+                await MainActor.run {
+                    session.isUploaded = true
+                }
             } catch {
                 print("Failed to upload session: \(error)")
             }

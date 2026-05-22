@@ -79,13 +79,18 @@ struct SessionView: View {
             TextField("Name", text: $sessionName)
             Button("Save") {
                 guard let session = pendingSession else { return }
+                pendingSession = nil
                 session.name = sessionName
                 
                 context.insert(session)
+                do {
+                    try context.save()
+                } catch {
+                    print("Failed to save session: \(error)")
+                }
                 viewModel.uploadSession(session)
                     
                 sessionName = ""
-                pendingSession = nil
             }
             Button("Cancel", role: .cancel) {
                 sessionName = ""
@@ -149,3 +154,4 @@ struct MotionDataView: View {
 #Preview {
     SessionView()
 }
+
