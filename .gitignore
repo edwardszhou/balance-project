@@ -151,3 +151,4 @@ INSIGHTFLOW_FILE_PATHS.txt
 .data/
 *.csv
 .ipynb_checkpoints
+.output/
