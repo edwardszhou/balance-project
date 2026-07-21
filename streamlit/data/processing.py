@@ -57,10 +57,13 @@ def process_opti(
     ay = np.gradient(vy, t)
     az = np.gradient(vz, t)
 
+    a_magnitude = np.sqrt(ax**2 + ay**2 + az**2)
+    v_magnitude = np.sqrt(vx**2 + vy**2 + vz**2)
+
     return {
         "time": t,
-        "velocity": {"x": vx, "y": vy, "z": vz},
-        "acceleration": {"x": ax, "y": ay, "z": az},
+        "velocity": {"x": vx, "y": vy, "z": vz, "magnitude": v_magnitude},
+        "acceleration": {"x": ax, "y": ay, "z": az, "magnitude": a_magnitude},
     }
 
 
@@ -86,10 +89,13 @@ def process_imu(
     vy = detrend(cumulative_trapezoid(ay, t, initial=0))
     vz = detrend(cumulative_trapezoid(az, t, initial=0))
 
+    a_magnitude = np.sqrt(ax**2 + ay**2 + az**2)
+    v_magnitude = np.sqrt(vx**2 + vy**2 + vz**2)
+
     return {
         "time": t,
-        "velocity": {"x": vx, "y": vy, "z": vz},
-        "acceleration": {"x": ax, "y": ay, "z": az},
+        "velocity": {"x": vx, "y": vy, "z": vz, "magnitude": v_magnitude},
+        "acceleration": {"x": ax, "y": ay, "z": az, "magnitude": a_magnitude},
     }
 
 
@@ -132,17 +138,15 @@ def process_trial(
 def process_rms(result: dict) -> pd.DataFrame:
     rows = []
     for source, data in result.items():
-        t = data["time"]
         for quantity in ("velocity", "acceleration"):
-            per_axis = {axis: rms(data[quantity][axis], t) for axis in AXES}
-            magnitude = np.sqrt(sum(data[quantity][axis] ** 2 for axis in AXES))
-            resultant = rms(magnitude, t)
             rows.append(
                 {
                     "Source": "Optitrack" if source == "opti" else "Airpods",
                     "Quantity": quantity,
-                    **{f"RMS {axis}": per_axis[axis] for axis in AXES},
-                    "RMS magnitude": resultant,
+                    "RMS y": rms(data[quantity]["y"], data["time"]),
+                    "RMS x": rms(data[quantity]["x"], data["time"]),
+                    "RMS z": rms(data[quantity]["z"], data["time"]),
+                    "RMS magnitude": rms(data[quantity]["magnitude"], data["time"]),
                 }
             )
     return pd.DataFrame(rows)

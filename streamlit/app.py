@@ -45,7 +45,7 @@ with st.sidebar:
     bp_order = st.slider("Airpods bandpass order", 1, 4, 4)
 
     st.header("Time")
-    time_trim = st.slider("Trimmed seconds", 0.0, 5.0, 3.0, 0.1)
+    time_trim = st.slider("Trimmed seconds", 0.0, 5.0, 1.5, 0.1)
     time_offset = st.slider("Offset seconds", -3.0, 3.0, 0.0, 0.1)
 
     st.header("Manipulate axes")
