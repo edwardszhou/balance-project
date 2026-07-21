@@ -6,7 +6,14 @@ from data.loaders import get_sessions, get_participants, load_opti, load_imu
 from data.processing import process_trial, process_rms
 
 DEFAULT_BASE_PATH = ""
-AXES = ["x", "y", "z"]
+AXIS_OPTIONS = {
+    "+X": (0, 1),
+    "+Y": (1, 1),
+    "+Z": (2, 1),
+    "-X": (0, -1),
+    "-Y": (1, -1),
+    "-Z": (2, -1),
+}
 
 st.set_page_config(page_title="Balance Session Analysis", layout="wide")
 st.title("Balance Project — Session View")
@@ -41,10 +48,14 @@ with st.sidebar:
     time_trim = st.slider("Trimmed seconds", 0.0, 5.0, 3.0, 0.1)
     time_offset = st.slider("Offset seconds", -3.0, 3.0, 0.0, 0.1)
 
-    st.header("Flip axes")
-    axes_to_flip = st.multiselect("Negate axes", AXES)
-
-    show_accel = st.checkbox("Also show acceleration comparison", value=False)
+    st.header("Manipulate axes")
+    st.caption("Change optitrack axes to match airpods")
+    axes_match = (
+        st.pills("Airpods X", AXIS_OPTIONS, default="+X", required=True),
+        st.pills("Airpods Y", AXIS_OPTIONS, default="+Y", required=True),
+        st.pills("Airpods Z", AXIS_OPTIONS, default="+Z", required=True),
+    )
+    axes_match = [AXIS_OPTIONS[option] for option in axes_match]
 
 
 if session:
@@ -62,18 +73,16 @@ if session:
             time_offset=time_offset,
             filter_opti=filter_opti,
             filter_imu=filter_imu,
-            flip_axes=axes_to_flip,
         )
     except ValueError as e:
         st.error(str(e))
         st.stop()
 
     st.subheader(f"Velocity — {session}")
-    st.plotly_chart(plot_axes(result, "velocity"), width="stretch")
+    st.plotly_chart(plot_axes(result, "velocity", axes_match), width="stretch")
 
-    if show_accel:
-        st.subheader(f"Acceleration — {session}")
-        st.plotly_chart(plot_axes(result, "acceleration"), width="stretch")
+    st.subheader(f"Acceleration — {session}")
+    st.plotly_chart(plot_axes(result, "acceleration", axes_match), width="stretch")
 
     st.subheader(f"RMS summary — {session}")
     st.dataframe(process_rms(result), width="stretch", hide_index=True)

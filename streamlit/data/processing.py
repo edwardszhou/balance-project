@@ -39,11 +39,9 @@ def process_opti(
     filter=True,
     flip_axes=None,
 ):
-    flip_axes = flip_axes or []
-
-    px = df["px"].values * (-1 if "x" in flip_axes else 1)
-    py = df["py"].values * (-1 if "y" in flip_axes else 1)
-    pz = df["pz"].values * (-1 if "z" in flip_axes else 1)
+    px = df["px"].values
+    py = df["py"].values
+    pz = df["pz"].values
 
     # Lowpass -> Differentiation
     if filter:
@@ -106,7 +104,6 @@ def process_trial(
     time_offset: float,
     filter_opti=True,
     filter_imu=True,
-    flip_axes=None,
 ):
     t_opti = df_opti["timestamp"].values + time_offset
     t_imu = df_imu["timestampEpoch"].values
@@ -127,9 +124,7 @@ def process_trial(
     df_imu = df_imu[mask_a]
 
     return {
-        "opti": process_opti(
-            df_opti, t_opti, lp_cutoff, lp_order, filter_opti, flip_axes
-        ),
+        "opti": process_opti(df_opti, t_opti, lp_cutoff, lp_order, filter_opti),
         "imu": process_imu(df_imu, t_imu, bp_cutoff, bp_order, filter_imu),
     }
 
