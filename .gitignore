@@ -148,7 +148,10 @@ build/
 .cache/
 INSIGHTFLOW_FILE_PATHS.txt
 
-.data/
+/data/
+/output/
 *.csv
 .ipynb_checkpoints
 .output/
+.venv/
+__pycache__/

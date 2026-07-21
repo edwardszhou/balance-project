@@ -1,7 +1,7 @@
 # Balance Project
 Using AirPods to detect balance changes.
 
-## Building the App Locally
+## Building the iOS App Locally
 
 ### Requirements:
 * macOs with Xcode installed
@@ -20,3 +20,16 @@ If necessary, change your bundle identifier to be unique.
 6. Run app (`Cmd + R`) to build the app on your iPhone
 7. On your iPhone, navigate to **Settings → General → VPN & Device Management** and trust the developer account.
 
+## Launching the Data Analysis Portal
+
+### Setup:
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Run:
+```bash
+streamlit run app.py
+```
