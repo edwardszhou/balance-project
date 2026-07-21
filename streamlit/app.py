@@ -21,11 +21,10 @@ if not participants:
     st.stop()
 
 with st.sidebar:
-
     participant = st.selectbox("Participants", participants)
     participant_path = Path(base_path) / participant
 
-    sessions = get_sessions(participant_path)
+    sessions, unmatched = get_sessions(participant_path)
     session = st.selectbox("Session", sessions.keys())
 
     st.header("Filter parameters")
@@ -47,39 +46,45 @@ with st.sidebar:
 
     show_accel = st.checkbox("Also show acceleration comparison", value=False)
 
-df_opti_raw = load_opti(participant_path, sessions[session][0])
-df_imu_raw = load_imu(participant_path, sessions[session][1])
 
-try:
-    result = process_trial(
-        df_opti_raw,
-        df_imu_raw,
-        lp_cutoff=lp_cutoff,
-        bp_cutoff=(bp_low, bp_high),
-        lp_order=lp_order,
-        bp_order=bp_order,
-        time_trim=time_trim,
-        time_offset=time_offset,
-        filter_opti=filter_opti,
-        filter_imu=filter_imu,
-        flip_axes=axes_to_flip,
-    )
-except ValueError as e:
-    # st.error(str(e))
-    st.stop()
+if session:
+    df_opti_raw = load_opti(participant_path, sessions[session][0])
+    df_imu_raw = load_imu(participant_path, sessions[session][1])
+    try:
+        result = process_trial(
+            df_opti_raw,
+            df_imu_raw,
+            lp_cutoff=lp_cutoff,
+            bp_cutoff=(bp_low, bp_high),
+            lp_order=lp_order,
+            bp_order=bp_order,
+            time_trim=time_trim,
+            time_offset=time_offset,
+            filter_opti=filter_opti,
+            filter_imu=filter_imu,
+            flip_axes=axes_to_flip,
+        )
+    except ValueError as e:
+        st.error(str(e))
+        st.stop()
 
+    st.subheader(f"Velocity — {session}")
+    st.plotly_chart(plot_axes(result, "velocity"), width="stretch")
 
-st.subheader(f"Velocity — {session}")
-st.plotly_chart(plot_axes(result, "velocity"), width="stretch")
+    if show_accel:
+        st.subheader(f"Acceleration — {session}")
+        st.plotly_chart(plot_axes(result, "acceleration"), width="stretch")
 
-if show_accel:
-    st.subheader(f"Acceleration — {session}")
-    st.plotly_chart(plot_axes(result, "acceleration"), width="stretch")
+    st.subheader(f"RMS summary — {session}")
+    st.dataframe(process_rms(result), width="stretch", hide_index=True)
 
-st.subheader(f"RMS summary — {session}")
-st.dataframe(process_rms(result), width="stretch", hide_index=True)
+    with st.expander("Raw sample counts"):
+        st.caption(f"Optitrack samples (post-trim): {len(result['opti']['time'])}")
+        st.caption(f"Airpods samples (post-trim): {len(result['imu']['time'])}")
 
+else:
+    st.error(f"No sessions found for participant {participant}.")
 
-with st.expander("Raw sample counts"):
-    st.write(f"Optitrack samples (post-trim): {len(result['opti']['time'])}")
-    st.write(f"Airpods samples (post-trim): {len(result['imu']['time'])}")
+if unmatched:
+    with st.expander("Unmatched files"):
+        st.caption("\n\n".join(unmatched))

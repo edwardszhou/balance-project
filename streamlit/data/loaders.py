@@ -22,10 +22,18 @@ def get_sessions(base_path: str):
     opti_map = {tuple(re.split(r"[-_ ]+", p.stem)): p for p in opti_files}
     imu_map = {tuple(re.split(r"[-_ ]+", p.stem)): p for p in imu_files}
 
-    return {
+    matched_keys = opti_map.keys() & imu_map.keys()
+    matched_sessions = {
         " ".join(key): (opti_map[key], imu_map[key])
         for key in sorted(opti_map.keys() & imu_map.keys())
     }
+    unmatched_sessions = sorted(
+        f"{p.parent.name}/{p.name}"
+        for key, p in opti_map.items() | imu_map.items()
+        if key not in matched_keys
+    )
+
+    return matched_sessions, unmatched_sessions
 
 
 @cache_data
