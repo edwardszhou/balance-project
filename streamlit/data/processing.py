@@ -5,6 +5,11 @@ from scipy.signal import butter, sosfiltfilt, detrend
 from scipy.integrate import cumulative_trapezoid, trapezoid
 
 AXES = ["x", "y", "z"]
+UNITS = {
+    "velocity": "m/s",
+    "acceleration": "m/s^2",
+    "jerk": "m/s^3",
+}
 
 
 def lowpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
@@ -57,13 +62,19 @@ def process_opti(
     ay = np.gradient(vy, t)
     az = np.gradient(vz, t)
 
-    a_magnitude = np.sqrt(ax**2 + ay**2 + az**2)
+    jx = np.gradient(ax, t)
+    jy = np.gradient(ay, t)
+    jz = np.gradient(az, t)
+
     v_magnitude = np.sqrt(vx**2 + vy**2 + vz**2)
+    a_magnitude = np.sqrt(ax**2 + ay**2 + az**2)
+    j_magnitude = np.sqrt(jx**2 + jy**2 + jz**2)
 
     return {
         "time": t,
         "velocity": {"x": vx, "y": vy, "z": vz, "magnitude": v_magnitude},
         "acceleration": {"x": ax, "y": ay, "z": az, "magnitude": a_magnitude},
+        "jerk": {"x": jx, "y": jy, "z": jz, "magnitude": j_magnitude},
     }
 
 
@@ -89,13 +100,19 @@ def process_imu(
     vy = detrend(cumulative_trapezoid(ay, t, initial=0))
     vz = detrend(cumulative_trapezoid(az, t, initial=0))
 
-    a_magnitude = np.sqrt(ax**2 + ay**2 + az**2)
+    jx = np.gradient(ax, t)
+    jy = np.gradient(ay, t)
+    jz = np.gradient(az, t)
+
     v_magnitude = np.sqrt(vx**2 + vy**2 + vz**2)
+    a_magnitude = np.sqrt(ax**2 + ay**2 + az**2)
+    j_magnitude = np.sqrt(jx**2 + jy**2 + jz**2)
 
     return {
         "time": t,
         "velocity": {"x": vx, "y": vy, "z": vz, "magnitude": v_magnitude},
         "acceleration": {"x": ax, "y": ay, "z": az, "magnitude": a_magnitude},
+        "jerk": {"x": jx, "y": jy, "z": jz, "magnitude": j_magnitude},
     }
 
 
@@ -138,7 +155,7 @@ def process_trial(
 def process_rms(result: dict) -> pd.DataFrame:
     rows = []
     for source, data in result.items():
-        for quantity in ("velocity", "acceleration"):
+        for quantity in UNITS:
             rows.append(
                 {
                     "Source": "Optitrack" if source == "opti" else "Airpods",

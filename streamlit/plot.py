@@ -1,11 +1,7 @@
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-BASE_AXES = ["x", "y", "z"]
-UNITS = {
-    "velocity": "m/s",
-    "acceleration": "m/s^2",
-}
+from data.processing import AXES, UNITS
 
 
 def plot_axes(result: dict, quantity: str, axes_match: list[tuple[int, int]]):
@@ -13,12 +9,12 @@ def plot_axes(result: dict, quantity: str, axes_match: list[tuple[int, int]]):
         rows=4,
         cols=1,
         shared_xaxes=True,
-        subplot_titles=[f"{axis} {quantity}" for axis in BASE_AXES]
+        subplot_titles=[f"{axis} {quantity}" for axis in AXES]
         + [f"{quantity} magnitude"],
     )
     for i, (axis_idx, factor) in enumerate(axes_match):
-        imu_axis = BASE_AXES[i]
-        opti_axis = BASE_AXES[axis_idx]
+        imu_axis = AXES[i]
+        opti_axis = AXES[axis_idx]
         fig.add_trace(
             go.Scatter(
                 x=result["opti"]["time"],

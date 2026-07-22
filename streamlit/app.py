@@ -3,7 +3,7 @@ from plot import plot_axes
 from pathlib import Path
 
 from data.loaders import get_sessions, get_participants, load_opti, load_imu
-from data.processing import process_trial, process_rms
+from data.processing import process_trial, process_rms, UNITS
 
 DEFAULT_BASE_PATH = ""
 AXIS_OPTIONS = {
@@ -33,6 +33,9 @@ with st.sidebar:
 
     sessions, unmatched = get_sessions(participant_path)
     session = st.selectbox("Session", sessions.keys())
+
+    st.header("Graph Display")
+    displayed_graphs = st.multiselect("Graphs to display", UNITS, "velocity")
 
     st.header("Filter parameters")
     filter_opti = st.checkbox("Apply filter to Optitrack", value=True)
@@ -78,11 +81,9 @@ if session:
         st.error(str(e))
         st.stop()
 
-    st.subheader(f"Velocity — {session}")
-    st.plotly_chart(plot_axes(result, "velocity", axes_match), width="stretch")
-
-    st.subheader(f"Acceleration — {session}")
-    st.plotly_chart(plot_axes(result, "acceleration", axes_match), width="stretch")
+    for unit in displayed_graphs:
+        st.subheader(f"{unit} — {session}")
+        st.plotly_chart(plot_axes(result, unit, axes_match), width="stretch")
 
     st.subheader(f"RMS summary — {session}")
     st.dataframe(process_rms(result), width="stretch", hide_index=True)
