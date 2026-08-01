@@ -115,8 +115,8 @@ def load_imu(base_path: Path, session: Path) -> pd.DataFrame:
 
     df = df[df["source"] == "airpods"]
     # Convert Gs to m/s^2, ms to seconds
-    df["ax"] *= 9.81
-    df["ay"] *= 9.81
-    df["az"] *= 9.81
+    df["ax"] *= -9.81
+    df["ay"] *= -9.81
+    df["az"] *= -9.81
     df["timestampEpoch"] /= 1000
     return df

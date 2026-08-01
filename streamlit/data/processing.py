@@ -87,9 +87,9 @@ def process_imu(
 ):
 
     # Bandpass -> Integration -> Detrend
-    ax = df["ax"].values
-    ay = df["ay"].values
-    az = df["az"].values
+    ax = detrend(df["ax"].values)
+    ay = detrend(df["ay"].values)
+    az = detrend(df["az"].values)
 
     if filter:
         ax = bandpass(ax, t, bp_cutoff, bp_order)
