@@ -10,12 +10,21 @@ UNITS = {
     "acceleration": "m/s^2",
     "jerk": "m/s^3",
 }
+OPTI_FILTERS = ["Low-pass"]
+AIRPODS_FILTERS = ["Detrend (a)", "Low-pass", "High-pass", "Detrend (v)"]
 
 
 def lowpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
     dt = np.median(np.diff(time))
     fs = 1 / dt
     sos = butter(order, cutoff / (0.5 * fs), btype="lowpass", output="sos")
+    return sosfiltfilt(sos, signal)
+
+
+def highpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
+    dt = np.median(np.diff(time))
+    fs = 1 / dt
+    sos = butter(order, cutoff / (0.5 * fs), btype="highpass", output="sos")
     return sosfiltfilt(sos, signal)
 
 
@@ -36,23 +45,16 @@ def rms(signal: np.ndarray, time: np.ndarray) -> float:
     return float(np.sqrt(integral / duration))
 
 
-def process_opti(
-    df: pd.DataFrame,
-    t: np.ndarray,
-    lp_cutoff: float,
-    lp_order: int,
-    filter=True,
-    flip_axes=None,
-):
+def process_opti(df: pd.DataFrame, t: np.ndarray, filters: dict):
     px = df["px"].values
     py = df["py"].values
     pz = df["pz"].values
 
     # Lowpass -> Differentiation
-    if filter:
-        px = lowpass(px, t, lp_cutoff, lp_order)
-        py = lowpass(py, t, lp_cutoff, lp_order)
-        pz = lowpass(pz, t, lp_cutoff, lp_order)
+    if OPTI_FILTERS[0] in filters:
+        px = lowpass(px, t, *filters[OPTI_FILTERS[0]])
+        py = lowpass(py, t, *filters[OPTI_FILTERS[0]])
+        pz = lowpass(pz, t, *filters[OPTI_FILTERS[0]])
 
     vx = np.gradient(px, t)
     vy = np.gradient(py, t)
@@ -78,27 +80,36 @@ def process_opti(
     }
 
 
-def process_imu(
-    df: pd.DataFrame,
-    t: np.ndarray,
-    bp_cutoff: tuple[float, float],
-    bp_order: int,
-    filter=True,
-):
+def process_imu(df: pd.DataFrame, t: np.ndarray, filters: dict):
 
     # Bandpass -> Integration -> Detrend
-    ax = detrend(df["ax"].values)
-    ay = detrend(df["ay"].values)
-    az = detrend(df["az"].values)
+    ax = df["ax"].values
+    ay = df["ay"].values
+    az = df["az"].values
 
-    if filter:
-        ax = bandpass(ax, t, bp_cutoff, bp_order)
-        ay = bandpass(ay, t, bp_cutoff, bp_order)
-        az = bandpass(az, t, bp_cutoff, bp_order)
+    if AIRPODS_FILTERS[0] in filters:
+        ax = detrend(ax)
+        ay = detrend(ay)
+        az = detrend(az)
 
-    vx = detrend(cumulative_trapezoid(ax, t, initial=0))
-    vy = detrend(cumulative_trapezoid(ay, t, initial=0))
-    vz = detrend(cumulative_trapezoid(az, t, initial=0))
+    if AIRPODS_FILTERS[1] in filters:
+        ax = lowpass(ax, t, *filters[AIRPODS_FILTERS[1]])
+        ay = lowpass(ay, t, *filters[AIRPODS_FILTERS[1]])
+        az = lowpass(az, t, *filters[AIRPODS_FILTERS[1]])
+
+    if AIRPODS_FILTERS[2] in filters:
+        ax = highpass(ax, t, *filters[AIRPODS_FILTERS[2]])
+        ay = highpass(ay, t, *filters[AIRPODS_FILTERS[2]])
+        az = highpass(az, t, *filters[AIRPODS_FILTERS[2]])
+
+    vx = cumulative_trapezoid(ax, t, initial=0)
+    vy = cumulative_trapezoid(ay, t, initial=0)
+    vz = cumulative_trapezoid(az, t, initial=0)
+
+    if AIRPODS_FILTERS[3] in filters:
+        vx = detrend(vx)
+        vy = detrend(vy)
+        vz = detrend(vz)
 
     jx = np.gradient(ax, t)
     jy = np.gradient(ay, t)
@@ -119,14 +130,10 @@ def process_imu(
 def process_trial(
     df_opti: pd.DataFrame,
     df_imu: pd.DataFrame,
-    lp_cutoff: float,
-    bp_cutoff: tuple[float, float],
-    lp_order: int,
-    bp_order: int,
+    filters_opti: dict,
+    filters_imu: dict,
     time_trim: float,
     time_offset: float,
-    filter_opti=True,
-    filter_imu=True,
 ):
     t_opti = df_opti["timestamp"].values + time_offset
     t_imu = df_imu["timestampEpoch"].values
@@ -147,8 +154,8 @@ def process_trial(
     df_imu = df_imu[mask_a]
 
     return {
-        "opti": process_opti(df_opti, t_opti, lp_cutoff, lp_order, filter_opti),
-        "imu": process_imu(df_imu, t_imu, bp_cutoff, bp_order, filter_imu),
+        "opti": process_opti(df_opti, t_opti, filters_opti),
+        "imu": process_imu(df_imu, t_imu, filters_imu),
     }
 
 

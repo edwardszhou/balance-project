@@ -3,7 +3,13 @@ from plot import plot_axes
 from pathlib import Path
 
 from data.loaders import get_sessions, get_participants, load_opti, load_imu
-from data.processing import process_trial, process_rms, UNITS
+from data.processing import (
+    process_trial,
+    process_rms,
+    UNITS,
+    OPTI_FILTERS,
+    AIRPODS_FILTERS,
+)
 
 DEFAULT_BASE_PATH = ""
 AXIS_OPTIONS = {
@@ -38,14 +44,36 @@ with st.sidebar:
     displayed_graphs = st.multiselect("Graphs to display", UNITS, "velocity")
 
     st.header("Filter parameters")
-    filter_opti = st.checkbox("Apply filter to Optitrack", value=True)
-    filter_imu = st.checkbox("Apply filter to Airpods", value=True)
+    filters_opti = st.pills(
+        "Optitrack filters",
+        OPTI_FILTERS,
+        selection_mode="multi",
+        default=OPTI_FILTERS,
+    )
+    filters_opti = {f: None for f in filters_opti}
+    if OPTI_FILTERS[0] in filters_opti:
+        filters_opti[OPTI_FILTERS[0]] = (
+            st.slider("Optitrack lowpass cutoff (Hz)", 5.0, 20.0, 10.0, 0.5),
+            st.slider("Optitrack lowpass order", 1, 4, 4),
+        )
 
-    lp_cutoff = st.slider("Optitrack lowpass cutoff (Hz)", 5.0, 20.0, 10.0, 0.5)
-    lp_order = st.slider("Optitrack lowpass order", 1, 4, 4)
-    bp_low = st.slider("Airpods highpass cutoff (Hz)", 0.01, 0.5, 0.1, 0.01)
-    bp_high = st.slider("Airpods lowpass cutoff (Hz)", 5.0, 20.0, 10.0, 0.5)
-    bp_order = st.slider("Airpods bandpass order", 1, 4, 4)
+    filters_imu = st.pills(
+        "Airpods filters",
+        AIRPODS_FILTERS,
+        selection_mode="multi",
+        default=AIRPODS_FILTERS,
+    )
+    filters_imu = {f: None for f in filters_imu}
+    if AIRPODS_FILTERS[1] in filters_imu:
+        filters_imu[AIRPODS_FILTERS[1]] = (
+            st.slider("Airpods lowpass cutoff (Hz)", 5.0, 20.0, 10.0, 0.5),
+            st.slider("Airpods lowpass order", 1, 4, 4),
+        )
+    if AIRPODS_FILTERS[2] in filters_imu:
+        filters_imu[AIRPODS_FILTERS[2]] = (
+            st.slider("Airpods highpass cutoff (Hz)", 0.01, 0.5, 0.1, 0.01),
+            st.slider("Airpods highpass order", 1, 4, 4),
+        )
 
     st.header("Time")
     time_trim = st.slider("Trimmed seconds", 0.0, 5.0, 1.5, 0.1)
@@ -60,7 +88,6 @@ with st.sidebar:
     )
     axes_match = [AXIS_OPTIONS[option] for option in axes_match]
 
-
 if session:
     df_opti_raw = load_opti(participant_path, sessions[session][0])
     df_imu_raw = load_imu(participant_path, sessions[session][1])
@@ -68,14 +95,10 @@ if session:
         result = process_trial(
             df_opti_raw,
             df_imu_raw,
-            lp_cutoff=lp_cutoff,
-            bp_cutoff=(bp_low, bp_high),
-            lp_order=lp_order,
-            bp_order=bp_order,
+            filters_opti=filters_opti,
+            filters_imu=filters_imu,
             time_trim=time_trim,
             time_offset=time_offset,
-            filter_opti=filter_opti,
-            filter_imu=filter_imu,
         )
     except ValueError as e:
         st.error(str(e))
