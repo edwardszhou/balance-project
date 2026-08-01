@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from scipy.signal import butter, sosfiltfilt, detrend
+from scipy.signal import butter, sosfiltfilt, detrend, correlate
 from scipy.integrate import cumulative_trapezoid, trapezoid
 
 AXES = ["x", "y", "z"]
@@ -133,25 +133,17 @@ def process_trial(
     filters_opti: dict,
     filters_imu: dict,
     time_trim: float,
-    time_offset: float,
 ):
-    t_opti = df_opti["timestamp"].values + time_offset
+    t_opti = df_opti["timestamp"].values
     t_imu = df_imu["timestampEpoch"].values
 
-    t_start = max(t_opti[0], t_imu[0]) + time_trim
-    t_end = min(t_opti[-1], t_imu[-1]) - time_trim
+    mask_opti = (t_opti >= t_opti[0] + time_trim) & (t_opti <= t_opti[-1] - time_trim)
+    t_opti = t_opti[mask_opti]
+    df_opti = df_opti[mask_opti]
 
-    if t_end <= t_start:
-        raise ValueError("Trim buffer too large for this session's overlap window.")
-
-    mask_o = (t_opti >= t_start) & (t_opti <= t_end)
-    mask_a = (t_imu >= t_start) & (t_imu <= t_end)
-
-    t_opti = t_opti[mask_o] - t_start
-    t_imu = t_imu[mask_a] - t_start
-
-    df_opti = df_opti[mask_o]
-    df_imu = df_imu[mask_a]
+    mask_imu = (t_imu >= t_imu[0] + time_trim) & (t_imu <= t_imu[-1] - time_trim)
+    t_imu = t_imu[mask_imu]
+    df_imu = df_imu[mask_imu]
 
     return {
         "opti": process_opti(df_opti, t_opti, filters_opti),
@@ -174,3 +166,26 @@ def process_rms(result: dict) -> pd.DataFrame:
                 }
             )
     return pd.DataFrame(rows)
+
+
+def process_ccf(result: dict) -> float:
+    t_opti = result["opti"]["time"]
+    t_imu = result["imu"]["time"]
+    v_opti = result["opti"]["velocity"]
+    v_imu = result["imu"]["velocity"]
+
+    # interpolate airpods velocity onto optitrack timestamps
+    imu_vx_resampled = np.interp(t_opti, t_imu, v_imu["x"])
+    imu_vy_resampled = np.interp(t_opti, t_imu, v_imu["y"])
+    imu_vz_resampled = np.interp(t_opti, t_imu, v_imu["z"])
+
+    corr_x = correlate(v_opti["x"], imu_vx_resampled)
+    corr_y = correlate(v_opti["y"], imu_vy_resampled)
+    corr_z = correlate(v_opti["z"], imu_vz_resampled)
+
+    lags = np.arange(-len(v_opti["x"]) + 1, len(v_opti["x"]))
+    lag = lags[np.argmax(corr_x + corr_y + corr_z)]
+
+    dt = np.median(np.diff(t_opti))
+
+    return lag * dt

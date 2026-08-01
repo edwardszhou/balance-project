@@ -4,7 +4,9 @@ from plotly.subplots import make_subplots
 from data.processing import AXES, UNITS
 
 
-def plot_axes(result: dict, quantity: str, axes_match: list[tuple[int, int]]):
+def plot_axes(
+    result: dict, quantity: str, time_offset: float, axes_match: list[tuple[int, int]]
+):
     fig = make_subplots(
         rows=4,
         cols=1,
@@ -17,7 +19,7 @@ def plot_axes(result: dict, quantity: str, axes_match: list[tuple[int, int]]):
         opti_axis = AXES[axis_idx]
         fig.add_trace(
             go.Scatter(
-                x=result["opti"]["time"],
+                x=result["opti"]["time"] - time_offset,
                 y=result["opti"][quantity][opti_axis] * factor,
                 name=f"Optitrack {imu_axis}",
             ),
@@ -35,7 +37,7 @@ def plot_axes(result: dict, quantity: str, axes_match: list[tuple[int, int]]):
         )
     fig.add_trace(
         go.Scatter(
-            x=result["opti"]["time"],
+            x=result["opti"]["time"] - time_offset,
             y=result["opti"][quantity]["magnitude"],
             name=f"Optitrack magnitude",
         ),

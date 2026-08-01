@@ -6,6 +6,7 @@ from data.loaders import get_sessions, get_participants, load_opti, load_imu
 from data.processing import (
     process_trial,
     process_rms,
+    process_ccf,
     UNITS,
     OPTI_FILTERS,
     AIRPODS_FILTERS,
@@ -77,36 +78,38 @@ with st.sidebar:
 
     st.header("Time")
     time_trim = st.slider("Trimmed seconds", 0.0, 5.0, 1.5, 0.1)
-    time_offset = st.slider("Offset seconds", -3.0, 3.0, 0.0, 0.1)
-
-    st.header("Manipulate axes")
-    st.caption("Change optitrack axes to match airpods")
-    axes_match = (
-        st.pills("Airpods X", AXIS_OPTIONS, default="+X", required=True),
-        st.pills("Airpods Y", AXIS_OPTIONS, default="+Y", required=True),
-        st.pills("Airpods Z", AXIS_OPTIONS, default="+Z", required=True),
-    )
-    axes_match = [AXIS_OPTIONS[option] for option in axes_match]
 
 if session:
     df_opti_raw = load_opti(participant_path, sessions[session][0])
     df_imu_raw = load_imu(participant_path, sessions[session][1])
-    try:
-        result = process_trial(
-            df_opti_raw,
-            df_imu_raw,
-            filters_opti=filters_opti,
-            filters_imu=filters_imu,
-            time_trim=time_trim,
-            time_offset=time_offset,
+
+    result = process_trial(
+        df_opti_raw,
+        df_imu_raw,
+        filters_opti=filters_opti,
+        filters_imu=filters_imu,
+        time_trim=time_trim,
+    )
+
+    lag = process_ccf(result)
+
+    with st.sidebar:
+        time_offset = st.slider("Offset seconds", -3.0, 3.0, lag, 0.05)
+
+        st.header("Manipulate axes")
+        st.caption("Change optitrack axes to match airpods")
+        axes_match = (
+            st.pills("Airpods X", AXIS_OPTIONS, default="+X", required=True),
+            st.pills("Airpods Y", AXIS_OPTIONS, default="+Y", required=True),
+            st.pills("Airpods Z", AXIS_OPTIONS, default="+Z", required=True),
         )
-    except ValueError as e:
-        st.error(str(e))
-        st.stop()
+        axes_match = [AXIS_OPTIONS[option] for option in axes_match]
 
     for unit in displayed_graphs:
         st.subheader(f"{unit} — {session}")
-        st.plotly_chart(plot_axes(result, unit, axes_match), width="stretch")
+        st.plotly_chart(
+            plot_axes(result, unit, time_offset, axes_match), width="stretch"
+        )
 
     st.subheader(f"RMS summary — {session}")
     st.dataframe(process_rms(result), width="stretch", hide_index=True)
