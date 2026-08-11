@@ -11,15 +11,7 @@ from data.processing import (
     OPTI_FILTERS,
     AIRPODS_FILTERS,
 )
-
-AXIS_OPTIONS = {
-    "+X": (0, 1),
-    "+Y": (1, 1),
-    "+Z": (2, 1),
-    "-X": (0, -1),
-    "-Y": (1, -1),
-    "-Z": (2, -1),
-}
+from data.defaults import AXIS_OPTIONS, DEFAULT_PARAMS
 
 st.set_page_config(page_title="Balance Session Analysis", layout="wide")
 st.title("Balance Project — Session View")
@@ -52,8 +44,16 @@ if session:
         filters_opti = {f: None for f in filters_opti}
         if OPTI_FILTERS[0] in filters_opti:
             filters_opti[OPTI_FILTERS[0]] = (
-                st.slider("Optitrack lowpass cutoff (Hz)", 5.0, 20.0, 10.0, 0.5),
-                st.slider("Optitrack lowpass order", 1, 4, 4),
+                st.slider(
+                    "Optitrack lowpass cutoff (Hz)",
+                    5.0,
+                    20.0,
+                    DEFAULT_PARAMS.opti.lp_cutoff,
+                    0.5,
+                ),
+                st.slider(
+                    "Optitrack lowpass order", 1, DEFAULT_PARAMS.opti.lp_order, 4
+                ),
             )
 
         filters_imu = st.pills(
@@ -65,17 +65,29 @@ if session:
         filters_imu = {f: None for f in filters_imu}
         if AIRPODS_FILTERS[1] in filters_imu:
             filters_imu[AIRPODS_FILTERS[1]] = (
-                st.slider("Airpods lowpass cutoff (Hz)", 5.0, 20.0, 10.0, 0.5),
-                st.slider("Airpods lowpass order", 1, 4, 4),
+                st.slider(
+                    "Airpods lowpass cutoff (Hz)",
+                    5.0,
+                    20.0,
+                    DEFAULT_PARAMS.imu.lp_cutoff,
+                    0.5,
+                ),
+                st.slider("Airpods lowpass order", 1, DEFAULT_PARAMS.imu.lp_order, 4),
             )
         if AIRPODS_FILTERS[2] in filters_imu:
             filters_imu[AIRPODS_FILTERS[2]] = (
-                st.slider("Airpods highpass cutoff (Hz)", 0.01, 0.5, 0.1, 0.01),
-                st.slider("Airpods highpass order", 1, 4, 4),
+                st.slider(
+                    "Airpods highpass cutoff (Hz)",
+                    0.01,
+                    0.5,
+                    DEFAULT_PARAMS.imu.hp_cutoff,
+                    0.01,
+                ),
+                st.slider("Airpods highpass order", 1, DEFAULT_PARAMS.imu.hp_order, 4),
             )
 
         st.header("Time")
-        time_trim = st.slider("Trimmed seconds", 0.0, 5.0, 1.5, 0.1)
+        time_trim = st.slider("Trimmed seconds", 0.0, 5.0, DEFAULT_PARAMS.trim, 0.1)
 
         result = process_trial(
             df_opti_raw,

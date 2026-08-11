@@ -23,9 +23,16 @@ with st.sidebar:
         participant_path = Path(base_path) / id
         sessions, unmatched = get_sessions(participant_path)
 
-        participants[id] = {"trials": sessions, "unmatched": unmatched}
+        participants[id] = {
+            "trials": sessions,
+            "unmatched": unmatched,
+            "path": participant_path,
+        }
 
         for session_id, (opti_file, imu_file) in sessions.items():
+            df_opti_raw = load_opti(opti_file)
+            df_imu_raw = load_imu(imu_file)
+
             trials.append(
                 {
                     "participant": id,
