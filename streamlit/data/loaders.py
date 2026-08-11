@@ -52,9 +52,7 @@ def get_participants(base_path: str):
 
 
 @cache_data
-def load_opti(base_path: Path, session: Path) -> pd.DataFrame:
-    filename = base_path / "optitrack" / session
-
+def load_opti(filename: Path) -> pd.DataFrame:
     with open(filename, "r") as f:
         metadata = next(f)
         meta = metadata.split(",")
@@ -87,9 +85,7 @@ def load_opti(base_path: Path, session: Path) -> pd.DataFrame:
 
 
 @cache_data
-def load_imu(base_path: Path, session: Path) -> pd.DataFrame:
-
-    filename = base_path / "optitrack" / session
+def load_imu(filename: Path) -> pd.DataFrame:
     try:
         df = pd.read_csv(filename)
         df = df.rename(
