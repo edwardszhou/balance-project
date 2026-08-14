@@ -20,7 +20,7 @@ def plot_axes(result: dict, quantity: str, time_offset: float, trial_params: Par
         opti_axis = AXES[axis_idx]
         fig.add_trace(
             go.Scatter(
-                x=result["opti"]["time"] - time_offset,
+                x=result["opti"].index - time_offset,
                 y=result["opti"][quantity][opti_axis] * factor,
                 name=f"Optitrack {imu_axis}",
             ),
@@ -29,7 +29,7 @@ def plot_axes(result: dict, quantity: str, time_offset: float, trial_params: Par
         )
         fig.add_trace(
             go.Scatter(
-                x=result["imu"]["time"],
+                x=result["imu"].index,
                 y=result["imu"][quantity][imu_axis],
                 name=f"Airpods {imu_axis}",
             ),
@@ -38,7 +38,7 @@ def plot_axes(result: dict, quantity: str, time_offset: float, trial_params: Par
         )
     fig.add_trace(
         go.Scatter(
-            x=result["opti"]["time"] - time_offset,
+            x=result["opti"].index - time_offset,
             y=result["opti"][quantity]["magnitude"],
             name=f"Optitrack magnitude",
         ),
@@ -47,7 +47,7 @@ def plot_axes(result: dict, quantity: str, time_offset: float, trial_params: Par
     )
     fig.add_trace(
         go.Scatter(
-            x=result["imu"]["time"],
+            x=result["imu"].index,
             y=result["imu"][quantity]["magnitude"],
             name=f"Airpods magnitude",
         ),

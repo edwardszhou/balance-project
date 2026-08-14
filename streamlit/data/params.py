@@ -114,8 +114,13 @@ class Params:
     def from_dict(cls, data: dict):
         try:
             return cls(
-                opti=OptiFilters(**data["opti"]),
-                imu=IMUFilters(**data["imu"]),
+                opti=OptiFilters(lowpass=FilterParams(**data["opti"]["lowpass"])),
+                imu=IMUFilters(
+                    detrend_a=FilterParams(**data["imu"]["detrend_a"]),
+                    lowpass=FilterParams(**data["imu"]["lowpass"]),
+                    highpass=FilterParams(**data["imu"]["highpass"]),
+                    detrend_v=FilterParams(**data["imu"]["detrend_v"]),
+                ),
                 trim=data["trim"],
                 axes=data["axes"],
             )

@@ -9,7 +9,7 @@ from data.loaders import (
     load_opti,
     load_imu,
     load_metadata,
-    write_participant_params,
+    write_global_params,
 )
 from data.params import Params
 from data.processing import process_trial, process_ccf
@@ -53,7 +53,7 @@ with st.sidebar:
             )
 
         # if no precomputed cc lag, calculate
-        if not metadata.get("participant"):
+        if not metadata.get("global"):
             lags = []
             for session_id, (opti_file, imu_file) in sessions.items():
                 df_opti_raw = load_opti(opti_file)
@@ -64,7 +64,8 @@ with st.sidebar:
                 result = process_trial(df_opti_raw, df_imu_raw, trial_params)
                 lag = process_ccf(result)
                 lags.append(lag)
-            write_participant_params(participant_path, {"offset": np.median(lags)})
+            print(f"Calculating lag for {id}: {np.median(lags)}")
+            write_global_params(participant_path, {"offset": np.median(lags)})
 
     trials = pd.DataFrame(trials)
 

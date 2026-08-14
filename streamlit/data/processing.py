@@ -72,12 +72,23 @@ def process_opti(df: pd.DataFrame, t: np.ndarray, filters: OptiFilters):
     a_magnitude = np.sqrt(ax**2 + ay**2 + az**2)
     j_magnitude = np.sqrt(jx**2 + jy**2 + jz**2)
 
-    return {
-        "time": t,
-        "velocity": {"x": vx, "y": vy, "z": vz, "magnitude": v_magnitude},
-        "acceleration": {"x": ax, "y": ay, "z": az, "magnitude": a_magnitude},
-        "jerk": {"x": jx, "y": jy, "z": jz, "magnitude": j_magnitude},
-    }
+    return pd.DataFrame(
+        {
+            ("acceleration", "x"): ax,
+            ("acceleration", "y"): ay,
+            ("acceleration", "z"): az,
+            ("acceleration", "magnitude"): a_magnitude,
+            ("velocity", "x"): vx,
+            ("velocity", "y"): vy,
+            ("velocity", "z"): vz,
+            ("velocity", "magnitude"): v_magnitude,
+            ("jerk", "x"): jx,
+            ("jerk", "y"): jy,
+            ("jerk", "z"): jz,
+            ("jerk", "magnitude"): j_magnitude,
+        },
+        index=t,
+    )
 
 
 def process_imu(df: pd.DataFrame, t: np.ndarray, filters: IMUFilters):
@@ -119,12 +130,23 @@ def process_imu(df: pd.DataFrame, t: np.ndarray, filters: IMUFilters):
     a_magnitude = np.sqrt(ax**2 + ay**2 + az**2)
     j_magnitude = np.sqrt(jx**2 + jy**2 + jz**2)
 
-    return {
-        "time": t,
-        "velocity": {"x": vx, "y": vy, "z": vz, "magnitude": v_magnitude},
-        "acceleration": {"x": ax, "y": ay, "z": az, "magnitude": a_magnitude},
-        "jerk": {"x": jx, "y": jy, "z": jz, "magnitude": j_magnitude},
-    }
+    return pd.DataFrame(
+        {
+            ("acceleration", "x"): ax,
+            ("acceleration", "y"): ay,
+            ("acceleration", "z"): az,
+            ("acceleration", "magnitude"): a_magnitude,
+            ("velocity", "x"): vx,
+            ("velocity", "y"): vy,
+            ("velocity", "z"): vz,
+            ("velocity", "magnitude"): v_magnitude,
+            ("jerk", "x"): jx,
+            ("jerk", "y"): jy,
+            ("jerk", "z"): jz,
+            ("jerk", "magnitude"): j_magnitude,
+        },
+        index=t,
+    )
 
 
 def process_trial(df_opti: pd.DataFrame, df_imu: pd.DataFrame, trial_params: Params):
@@ -157,18 +179,18 @@ def process_rms(result: dict) -> pd.DataFrame:
                 {
                     "Source": "Optitrack" if source == "opti" else "Airpods",
                     "Quantity": quantity,
-                    "RMS y": rms(data[quantity]["y"], data["time"]),
-                    "RMS x": rms(data[quantity]["x"], data["time"]),
-                    "RMS z": rms(data[quantity]["z"], data["time"]),
-                    "RMS magnitude": rms(data[quantity]["magnitude"], data["time"]),
+                    "RMS y": rms(data[quantity]["y"], data.index),
+                    "RMS x": rms(data[quantity]["x"], data.index),
+                    "RMS z": rms(data[quantity]["z"], data.index),
+                    "RMS magnitude": rms(data[quantity]["magnitude"], data.index),
                 }
             )
     return pd.DataFrame(rows)
 
 
 def process_ccf(result: dict) -> float:
-    t_opti = result["opti"]["time"]
-    t_imu = result["imu"]["time"]
+    t_opti = result["opti"].index
+    t_imu = result["imu"].index
     v_opti = result["opti"]["velocity"]
     v_imu = result["imu"]["velocity"]
 

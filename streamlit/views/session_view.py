@@ -2,7 +2,13 @@ import streamlit as st
 from pprint import pprint
 
 from components.plot import plot_axes
-from data.loaders import load_opti, load_imu, load_metadata
+from data.loaders import (
+    load_opti,
+    load_imu,
+    load_metadata,
+    write_trial_params,
+    write_global_params,
+)
 from data.processing import (
     process_trial,
     process_rms,
@@ -32,7 +38,7 @@ if session:
     df_imu_raw = load_imu(trial["imu_file"])
 
     metadata = load_metadata(participant["path"])
-    participant_params = metadata.get("participant", {})
+    global_params = metadata.get("global", {})
     trial_params = Params.from_dict(metadata.get(trial["task"], {}))
 
     with st.sidebar:
@@ -60,7 +66,7 @@ if session:
                 0.5,
             )
             trial_params.opti.lowpass.order = st.slider(
-                "Optitrack lowpass order", 1, trial_params.opti.lowpass.order, 4
+                "Optitrack lowpass order", 1, 4, trial_params.opti.lowpass.order
             )
 
         filters_imu = trial_params.imu.label_fields()
@@ -82,7 +88,7 @@ if session:
                 0.5,
             )
             trial_params.imu.lowpass.order = st.slider(
-                "Airpods lowpass order", 1, trial_params.imu.lowpass.order, 4
+                "Airpods lowpass order", 1, 4, trial_params.imu.lowpass.order
             )
         if trial_params.imu.highpass.active:
             trial_params.imu.highpass.cutoff = st.slider(
@@ -93,7 +99,7 @@ if session:
                 0.01,
             )
             trial_params.imu.highpass.order = st.slider(
-                "Airpods highpass order", 1, trial_params.imu.highpass.order, 4
+                "Airpods highpass order", 1, 4, trial_params.imu.highpass.order
             )
 
         st.header("Time")
@@ -103,10 +109,8 @@ if session:
 
         result = process_trial(df_opti_raw, df_imu_raw, trial_params)
 
-        offset = participant_params.get("offset", 0)
-        participant_params["offset"] = st.slider(
-            "Offset seconds", -3.0, 3.0, offset, 0.01
-        )
+        offset = global_params.get("offset", 0)
+        global_params["offset"] = st.slider("Offset seconds", -3.0, 3.0, offset, 0.01)
 
         st.header("Manipulate axes")
         st.caption("Change optitrack axes to match airpods")
@@ -122,14 +126,24 @@ if session:
             ),
         )
 
-        st.header("Save trial parameters")
-        if st.button("Save"):
-            pass
+        st.header("Save metadata")
+        if st.button("Save parameters to trial"):
+            write_trial_params(participant["path"], trial["task"], trial_params)
+            write_global_params(participant["path"], global_params)
+
+        if st.button("Save parameters to all trials of participant"):
+            for t in participant["trials"]:
+                trial = trials.loc[t]
+                write_trial_params(participant["path"], trial["task"], trial_params)
+                write_global_params(participant["path"], global_params)
+
+        if st.button("Reset parameters"):
+            pprint("Resetting")
 
     for unit in displayed_graphs:
         st.subheader(f"{unit} — {session}")
         st.plotly_chart(
-            plot_axes(result, unit, participant_params["offset"], trial_params),
+            plot_axes(result, unit, global_params["offset"], trial_params),
             width="stretch",
         )
 
@@ -137,8 +151,8 @@ if session:
     st.dataframe(process_rms(result), width="stretch", hide_index=True)
 
     with st.expander("Raw sample counts"):
-        st.caption(f"Optitrack samples (post-trim): {len(result['opti']['time'])}")
-        st.caption(f"Airpods samples (post-trim): {len(result['imu']['time'])}")
+        st.caption(f"Optitrack samples (post-trim): {len(result['opti'])}")
+        st.caption(f"Airpods samples (post-trim): {len(result['imu'])}")
 
 else:
     st.error(f"No sessions found for participant {pid}.")
