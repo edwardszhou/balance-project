@@ -7,6 +7,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 from streamlit import cache_data
 
+from .params import Params
+
 
 @cache_data
 def get_sessions(base_path: str):
@@ -116,3 +118,25 @@ def load_imu(filename: Path) -> pd.DataFrame:
     df["az"] *= -9.81
     df["timestampEpoch"] /= 1000
     return df
+
+
+def load_metadata(participant_path: Path) -> dict:
+    filename = participant_path / "metadata.json"
+    try:
+        with open(filename, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def write_trial_params(participant_path: Path, trial: str, params: Params):
+    write_metadata(participant_path, {trial: params.to_dict()})
+
+
+def write_metadata(participant_path: Path, updates: dict):
+    filename = participant_path / "metadata.json"
+    metadata = load_metadata(participant_path)
+    metadata.update(updates)
+
+    with open(filename, "w") as f:
+        json.dump(metadata, f, indent=4)

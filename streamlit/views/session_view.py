@@ -1,17 +1,18 @@
 import streamlit as st
-from components.plot import plot_axes
-from pathlib import Path
+from pprint import pprint
 
-from data.loaders import get_sessions, get_participants, load_opti, load_imu
+from components.plot import plot_axes
+from data.loaders import load_opti, load_imu, load_metadata
 from data.processing import (
     process_trial,
     process_rms,
     process_ccf,
     UNITS,
-    OPTI_FILTERS,
-    AIRPODS_FILTERS,
 )
-from data.defaults import AXIS_OPTIONS, DEFAULT_PARAMS
+from data.params import (
+    Params,
+    AXIS_OPTIONS,
+)
 
 st.set_page_config(page_title="Balance Session Analysis", layout="wide")
 st.title("Balance Project — Session View")
@@ -24,77 +25,87 @@ with st.sidebar:
     participant = participants[pid]
     session = st.selectbox("Session", participant["trials"])
 
+
 if session:
     trial = trials.loc[session]
-
     df_opti_raw = load_opti(trial["opti_file"])
     df_imu_raw = load_imu(trial["imu_file"])
+
+    metadata = load_metadata(participant["path"])
+    trial_params = Params.from_dict(metadata.get(trial["task"], {}))
 
     with st.sidebar:
         st.header("Graph Display")
         displayed_graphs = st.multiselect("Graphs to display", UNITS, "velocity")
 
         st.header("Filter parameters")
-        filters_opti = st.pills(
+
+        filters_opti = trial_params.opti.label_fields()
+        active_opti = st.pills(
             "Optitrack filters",
-            OPTI_FILTERS,
+            filters_opti,
             selection_mode="multi",
-            default=OPTI_FILTERS,
+            default=trial_params.opti.active_labels(),
         )
-        filters_opti = {f: None for f in filters_opti}
-        if OPTI_FILTERS[0] in filters_opti:
-            filters_opti[OPTI_FILTERS[0]] = (
-                st.slider(
-                    "Optitrack lowpass cutoff (Hz)",
-                    5.0,
-                    20.0,
-                    DEFAULT_PARAMS.opti.lp_cutoff,
-                    0.5,
-                ),
-                st.slider(
-                    "Optitrack lowpass order", 1, DEFAULT_PARAMS.opti.lp_order, 4
-                ),
+        for label in filters_opti:
+            trial_params.opti[label].active = label in active_opti
+
+        if trial_params.opti.lowpass.active:
+            trial_params.opti.lowpass.cutoff = st.slider(
+                "Optitrack lowpass cutoff (Hz)",
+                5.0,
+                20.0,
+                trial_params.opti.lowpass.cutoff,
+                0.5,
+            )
+            trial_params.opti.lowpass.order = st.slider(
+                "Optitrack lowpass order", 1, trial_params.opti.lowpass.order, 4
             )
 
-        filters_imu = st.pills(
+        filters_imu = trial_params.imu.label_fields()
+        active_imu = st.pills(
             "Airpods filters",
-            AIRPODS_FILTERS,
+            filters_imu,
             selection_mode="multi",
-            default=AIRPODS_FILTERS,
+            default=trial_params.imu.active_labels(),
         )
-        filters_imu = {f: None for f in filters_imu}
-        if AIRPODS_FILTERS[1] in filters_imu:
-            filters_imu[AIRPODS_FILTERS[1]] = (
-                st.slider(
-                    "Airpods lowpass cutoff (Hz)",
-                    5.0,
-                    20.0,
-                    DEFAULT_PARAMS.imu.lp_cutoff,
-                    0.5,
-                ),
-                st.slider("Airpods lowpass order", 1, DEFAULT_PARAMS.imu.lp_order, 4),
+        for label in filters_imu:
+            trial_params.imu[label].active = label in active_imu
+
+        if trial_params.imu.lowpass.active:
+            trial_params.imu.lowpass.cutoff = st.slider(
+                "Airpods lowpass cutoff (Hz)",
+                5.0,
+                20.0,
+                trial_params.imu.lowpass.cutoff,
+                0.5,
             )
-        if AIRPODS_FILTERS[2] in filters_imu:
-            filters_imu[AIRPODS_FILTERS[2]] = (
-                st.slider(
-                    "Airpods highpass cutoff (Hz)",
-                    0.01,
-                    0.5,
-                    DEFAULT_PARAMS.imu.hp_cutoff,
-                    0.01,
-                ),
-                st.slider("Airpods highpass order", 1, DEFAULT_PARAMS.imu.hp_order, 4),
+            trial_params.imu.lowpass.order = st.slider(
+                "Airpods lowpass order", 1, trial_params.imu.lowpass.order, 4
+            )
+        if trial_params.imu.highpass.active:
+            trial_params.imu.highpass.cutoff = st.slider(
+                "Airpods highpass cutoff (Hz)",
+                0.01,
+                0.5,
+                trial_params.imu.highpass.cutoff,
+                0.01,
+            )
+            trial_params.imu.highpass.order = st.slider(
+                "Airpods highpass order", 1, trial_params.imu.highpass.order, 4
             )
 
         st.header("Time")
-        time_trim = st.slider("Trimmed seconds", 0.0, 5.0, DEFAULT_PARAMS.trim, 0.1)
+        trial_params.trim = st.slider(
+            "Trimmed seconds", 0.0, 5.0, trial_params.trim, 0.1
+        )
 
         result = process_trial(
             df_opti_raw,
             df_imu_raw,
             filters_opti=filters_opti,
             filters_imu=filters_imu,
-            time_trim=time_trim,
+            time_trim=1.5,
         )
 
         lag = process_ccf(result)
