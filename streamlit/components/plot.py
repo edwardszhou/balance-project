@@ -2,11 +2,12 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from data.processing import AXES, UNITS
+from data.params import Params, AXIS_OPTIONS
 
 
-def plot_axes(
-    result: dict, quantity: str, time_offset: float, axes_match: list[tuple[int, int]]
-):
+def plot_axes(result: dict, quantity: str, time_offset: float, trial_params: Params):
+    axes_match = [AXIS_OPTIONS[option] for option in trial_params.axes]
+
     fig = make_subplots(
         rows=4,
         cols=1,

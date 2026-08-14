@@ -32,6 +32,7 @@ if session:
     df_imu_raw = load_imu(trial["imu_file"])
 
     metadata = load_metadata(participant["path"])
+    participant_params = metadata.get("participant", {})
     trial_params = Params.from_dict(metadata.get(trial["task"], {}))
 
     with st.sidebar:
@@ -100,31 +101,30 @@ if session:
             "Trimmed seconds", 0.0, 5.0, trial_params.trim, 0.1
         )
 
-        result = process_trial(
-            df_opti_raw,
-            df_imu_raw,
-            filters_opti=filters_opti,
-            filters_imu=filters_imu,
-            time_trim=1.5,
-        )
-
+        result = process_trial(df_opti_raw, df_imu_raw, trial_params)
         lag = process_ccf(result)
 
-        time_offset = st.slider("Offset seconds", -3.0, 3.0, lag, 0.05)
+        participant_params["offset"] = st.slider("Offset seconds", -3.0, 3.0, lag, 0.05)
 
         st.header("Manipulate axes")
         st.caption("Change optitrack axes to match airpods")
-        axes_match = (
-            st.pills("Airpods X", AXIS_OPTIONS, default="+X", required=True),
-            st.pills("Airpods Y", AXIS_OPTIONS, default="+Y", required=True),
-            st.pills("Airpods Z", AXIS_OPTIONS, default="+Z", required=True),
+        trial_params.axes = (
+            st.pills(
+                "Airpods X", AXIS_OPTIONS, default=trial_params.axes[0], required=True
+            ),
+            st.pills(
+                "Airpods Y", AXIS_OPTIONS, default=trial_params.axes[1], required=True
+            ),
+            st.pills(
+                "Airpods Z", AXIS_OPTIONS, default=trial_params.axes[2], required=True
+            ),
         )
-        axes_match = [AXIS_OPTIONS[option] for option in axes_match]
 
     for unit in displayed_graphs:
         st.subheader(f"{unit} — {session}")
         st.plotly_chart(
-            plot_axes(result, unit, time_offset, axes_match), width="stretch"
+            plot_axes(result, unit, participant_params["offset"], trial_params),
+            width="stretch",
         )
 
     st.subheader(f"RMS summary — {session}")

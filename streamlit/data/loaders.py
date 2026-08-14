@@ -133,6 +133,10 @@ def write_trial_params(participant_path: Path, trial: str, params: Params):
     write_metadata(participant_path, {trial: params.to_dict()})
 
 
+def write_participant_params(participant_path: Path, updates: dict):
+    write_metadata(participant_path, {"participant": updates})
+
+
 def write_metadata(participant_path: Path, updates: dict):
     filename = participant_path / "metadata.json"
     metadata = load_metadata(participant_path)

@@ -4,14 +4,14 @@ import pandas as pd
 from scipy.signal import butter, sosfiltfilt, detrend, correlate
 from scipy.integrate import cumulative_trapezoid, trapezoid
 
+from .params import Params, OptiFilters, IMUFilters
+
 AXES = ["x", "y", "z"]
 UNITS = {
     "velocity": "m/s",
     "acceleration": "m/s^2",
     "jerk": "m/s^3",
 }
-OPTI_FILTERS = ["Low-pass"]
-AIRPODS_FILTERS = ["Detrend (a)", "Low-pass", "High-pass", "Detrend (v)"]
 
 
 def lowpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
@@ -45,16 +45,16 @@ def rms(signal: np.ndarray, time: np.ndarray) -> float:
     return float(np.sqrt(integral / duration))
 
 
-def process_opti(df: pd.DataFrame, t: np.ndarray, filters: dict):
+def process_opti(df: pd.DataFrame, t: np.ndarray, filters: OptiFilters):
     px = df["px"].values
     py = df["py"].values
     pz = df["pz"].values
 
     # Lowpass -> Differentiation
-    if OPTI_FILTERS[0] in filters:
-        px = lowpass(px, t, *filters[OPTI_FILTERS[0]])
-        py = lowpass(py, t, *filters[OPTI_FILTERS[0]])
-        pz = lowpass(pz, t, *filters[OPTI_FILTERS[0]])
+    if filters.lowpass.active:
+        px = lowpass(px, t, filters.lowpass.cutoff, filters.lowpass.order)
+        py = lowpass(py, t, filters.lowpass.cutoff, filters.lowpass.order)
+        pz = lowpass(pz, t, filters.lowpass.cutoff, filters.lowpass.order)
 
     vx = np.gradient(px, t)
     vy = np.gradient(py, t)
@@ -80,33 +80,33 @@ def process_opti(df: pd.DataFrame, t: np.ndarray, filters: dict):
     }
 
 
-def process_imu(df: pd.DataFrame, t: np.ndarray, filters: dict):
+def process_imu(df: pd.DataFrame, t: np.ndarray, filters: IMUFilters):
 
     # Bandpass -> Integration -> Detrend
     ax = df["ax"].values
     ay = df["ay"].values
     az = df["az"].values
 
-    if AIRPODS_FILTERS[0] in filters:
+    if filters.detrend_a.active:
         ax = detrend(ax)
         ay = detrend(ay)
         az = detrend(az)
 
-    if AIRPODS_FILTERS[1] in filters:
-        ax = lowpass(ax, t, *filters[AIRPODS_FILTERS[1]])
-        ay = lowpass(ay, t, *filters[AIRPODS_FILTERS[1]])
-        az = lowpass(az, t, *filters[AIRPODS_FILTERS[1]])
+    if filters.lowpass.active:
+        ax = lowpass(ax, t, filters.lowpass.cutoff, filters.lowpass.order)
+        ay = lowpass(ay, t, filters.lowpass.cutoff, filters.lowpass.order)
+        az = lowpass(az, t, filters.lowpass.cutoff, filters.lowpass.order)
 
-    if AIRPODS_FILTERS[2] in filters:
-        ax = highpass(ax, t, *filters[AIRPODS_FILTERS[2]])
-        ay = highpass(ay, t, *filters[AIRPODS_FILTERS[2]])
-        az = highpass(az, t, *filters[AIRPODS_FILTERS[2]])
+    if filters.highpass.active:
+        ax = highpass(ax, t, filters.highpass.cutoff, filters.highpass.order)
+        ay = highpass(ay, t, filters.highpass.cutoff, filters.highpass.order)
+        az = highpass(az, t, filters.highpass.cutoff, filters.highpass.order)
 
     vx = cumulative_trapezoid(ax, t, initial=0)
     vy = cumulative_trapezoid(ay, t, initial=0)
     vz = cumulative_trapezoid(az, t, initial=0)
 
-    if AIRPODS_FILTERS[3] in filters:
+    if filters.detrend_v.active:
         vx = detrend(vx)
         vy = detrend(vy)
         vz = detrend(vz)
@@ -127,27 +127,25 @@ def process_imu(df: pd.DataFrame, t: np.ndarray, filters: dict):
     }
 
 
-def process_trial(
-    df_opti: pd.DataFrame,
-    df_imu: pd.DataFrame,
-    filters_opti: dict,
-    filters_imu: dict,
-    time_trim: float,
-):
+def process_trial(df_opti: pd.DataFrame, df_imu: pd.DataFrame, trial_params: Params):
     t_opti = df_opti["timestamp"].values
     t_imu = df_imu["timestampEpoch"].values
 
-    mask_opti = (t_opti >= t_opti[0] + time_trim) & (t_opti <= t_opti[-1] - time_trim)
+    mask_opti = (t_opti >= t_opti[0] + trial_params.trim) & (
+        t_opti <= t_opti[-1] - trial_params.trim
+    )
     t_opti = t_opti[mask_opti]
     df_opti = df_opti[mask_opti]
 
-    mask_imu = (t_imu >= t_imu[0] + time_trim) & (t_imu <= t_imu[-1] - time_trim)
+    mask_imu = (t_imu >= t_imu[0] + trial_params.trim) & (
+        t_imu <= t_imu[-1] - trial_params.trim
+    )
     t_imu = t_imu[mask_imu]
     df_imu = df_imu[mask_imu]
 
     return {
-        "opti": process_opti(df_opti, t_opti, filters_opti),
-        "imu": process_imu(df_imu, t_imu, filters_imu),
+        "opti": process_opti(df_opti, t_opti, trial_params.opti),
+        "imu": process_imu(df_imu, t_imu, trial_params.imu),
     }
 
 
