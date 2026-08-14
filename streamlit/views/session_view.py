@@ -102,9 +102,11 @@ if session:
         )
 
         result = process_trial(df_opti_raw, df_imu_raw, trial_params)
-        lag = process_ccf(result)
 
-        participant_params["offset"] = st.slider("Offset seconds", -3.0, 3.0, lag, 0.05)
+        offset = participant_params.get("offset", 0)
+        participant_params["offset"] = st.slider(
+            "Offset seconds", -3.0, 3.0, offset, 0.01
+        )
 
         st.header("Manipulate axes")
         st.caption("Change optitrack axes to match airpods")
@@ -119,6 +121,10 @@ if session:
                 "Airpods Z", AXIS_OPTIONS, default=trial_params.axes[2], required=True
             ),
         )
+
+        st.header("Save trial parameters")
+        if st.button("Save"):
+            pass
 
     for unit in displayed_graphs:
         st.subheader(f"{unit} — {session}")

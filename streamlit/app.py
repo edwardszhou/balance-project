@@ -1,8 +1,18 @@
+import numpy as np
 import pandas as pd
 import streamlit as st
 from pathlib import Path
 
-from data.loaders import get_sessions, get_participants, load_opti, load_imu
+from data.loaders import (
+    get_sessions,
+    get_participants,
+    load_opti,
+    load_imu,
+    load_metadata,
+    write_participant_params,
+)
+from data.params import Params
+from data.processing import process_trial, process_ccf
 
 DEFAULT_BASE_PATH = ""
 
@@ -29,10 +39,9 @@ with st.sidebar:
             "path": participant_path,
         }
 
-        for session_id, (opti_file, imu_file) in sessions.items():
-            df_opti_raw = load_opti(opti_file)
-            df_imu_raw = load_imu(imu_file)
+        metadata = load_metadata(participant_path)
 
+        for session_id, (opti_file, imu_file) in sessions.items():
             trials.append(
                 {
                     "participant": id,
@@ -42,6 +51,21 @@ with st.sidebar:
                     "imu_file": imu_file,
                 }
             )
+
+        # if no precomputed cc lag, calculate
+        if not metadata.get("participant"):
+            lags = []
+            for session_id, (opti_file, imu_file) in sessions.items():
+                df_opti_raw = load_opti(opti_file)
+                df_imu_raw = load_imu(imu_file)
+                task = session_id.rsplit(" ", 1)[0]
+
+                trial_params = Params.from_dict(metadata.get(task, {}))
+                result = process_trial(df_opti_raw, df_imu_raw, trial_params)
+                lag = process_ccf(result)
+                lags.append(lag)
+            write_participant_params(participant_path, {"offset": np.median(lags)})
+
     trials = pd.DataFrame(trials)
 
 

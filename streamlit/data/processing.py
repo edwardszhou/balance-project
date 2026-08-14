@@ -180,13 +180,9 @@ def process_ccf(result: dict) -> float:
     corr_x = correlate(v_opti["x"], imu_vx_resampled)
     corr_y = correlate(v_opti["y"], imu_vy_resampled)
     corr_z = correlate(v_opti["z"], imu_vz_resampled)
-    corr = corr_x + corr_y + corr_z
 
     lags = np.arange(-len(v_opti["x"]) + 1, len(v_opti["x"]))
-
-    # Keep only lags within 1 second
-    mask = (lags >= -120) & (lags <= 120)
-    lag = lags[mask][np.argmax(corr[mask])]
+    lag = lags[np.argmax(corr_x + corr_y + corr_z)]
 
     dt = np.median(np.diff(t_opti))
 
