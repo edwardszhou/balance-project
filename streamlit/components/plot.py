@@ -2,12 +2,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from data.processing import AXES, UNITS
-from data.params import Params, AXIS_OPTIONS
 
 
-def plot_axes(result: dict, quantity: str, time_offset: float, trial_params: Params):
-    axes_match = [AXIS_OPTIONS[option] for option in trial_params.axes]
-
+def plot_axes(result: dict, quantity: str, time_offset: float):
     fig = make_subplots(
         rows=4,
         cols=1,
@@ -15,14 +12,12 @@ def plot_axes(result: dict, quantity: str, time_offset: float, trial_params: Par
         subplot_titles=[f"{axis} {quantity}" for axis in AXES]
         + [f"{quantity} magnitude"],
     )
-    for i, (axis_idx, factor) in enumerate(axes_match):
-        imu_axis = AXES[i]
-        opti_axis = AXES[axis_idx]
+    for i, axis in enumerate(AXES):
         fig.add_trace(
             go.Scatter(
                 x=result["opti"].index - time_offset,
-                y=result["opti"][quantity][opti_axis] * factor,
-                name=f"Optitrack {imu_axis}",
+                y=result["opti"][quantity][axis],
+                name=f"Optitrack {axis}",
             ),
             row=i + 1,
             col=1,
@@ -30,8 +25,8 @@ def plot_axes(result: dict, quantity: str, time_offset: float, trial_params: Par
         fig.add_trace(
             go.Scatter(
                 x=result["imu"].index,
-                y=result["imu"][quantity][imu_axis],
-                name=f"Airpods {imu_axis}",
+                y=result["imu"][quantity][axis],
+                name=f"Airpods {axis}",
             ),
             row=i + 1,
             col=1,

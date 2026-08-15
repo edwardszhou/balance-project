@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import streamlit as st
 from pathlib import Path
@@ -6,13 +5,9 @@ from pathlib import Path
 from data.loaders import (
     get_sessions,
     get_participants,
-    load_opti,
-    load_imu,
     load_metadata,
-    write_global_params,
 )
-from data.params import Params
-from data.processing import process_trial, process_ccf
+from data.helpers import calculate_median_lag
 
 DEFAULT_BASE_PATH = ""
 
@@ -39,33 +34,23 @@ with st.sidebar:
             "path": participant_path,
         }
 
-        metadata = load_metadata(participant_path)
-
-        for session_id, (opti_file, imu_file) in sessions.items():
-            trials.append(
-                {
-                    "participant": id,
-                    "task": session_id.rsplit(" ", 1)[0],
-                    "session_id": session_id,
-                    "opti_file": opti_file,
-                    "imu_file": imu_file,
-                }
-            )
+        participant_trials = [
+            {
+                "participant": id,
+                "task": session_id.rsplit(" ", 1)[0],
+                "session_id": session_id,
+                "opti_file": opti_file,
+                "imu_file": imu_file,
+            }
+            for session_id, (opti_file, imu_file) in sessions.items()
+        ]
+        trials.extend(participant_trials)
 
         # if no precomputed cc lag, calculate
+        metadata = load_metadata(participant_path)
         if not metadata.get("global"):
-            lags = []
-            for session_id, (opti_file, imu_file) in sessions.items():
-                df_opti_raw = load_opti(opti_file)
-                df_imu_raw = load_imu(imu_file)
-                task = session_id.rsplit(" ", 1)[0]
-
-                trial_params = Params.from_dict(metadata.get(task, {}))
-                result = process_trial(df_opti_raw, df_imu_raw, trial_params)
-                lag = process_ccf(result)
-                lags.append(lag)
-            print(f"Calculating lag for {id}: {np.median(lags)}")
-            write_global_params(participant_path, {"offset": np.median(lags)})
+            participant_trials_df = pd.DataFrame(participant_trials)
+            calculate_median_lag(participant_trials_df, participant_path)
 
     trials = pd.DataFrame(trials)
 

@@ -9,35 +9,29 @@ from data.loaders import (
     write_trial_params,
     write_global_params,
 )
-from data.processing import (
-    process_trial,
-    process_rms,
-    process_ccf,
-    UNITS,
-)
-from data.params import (
-    Params,
-    AXIS_OPTIONS,
-)
+from data.processing import process_trial, process_rms, UNITS
+from data.params import Params, AXIS_OPTIONS
+from data.helpers import calculate_median_lag
 
-st.set_page_config(page_title="Balance Session Analysis", layout="wide")
-st.title("Balance Project — Session View")
+st.set_page_config(page_title="Balance Participant Analysis", layout="wide")
+st.title("Balance Project — Participant View")
 
-participants = st.session_state.participants
-trials = st.session_state.trials
+all_participants = st.session_state.participants
+all_trials = st.session_state.trials
 
 with st.sidebar:
-    pid = st.selectbox("Participants", participants)
-    participant = participants[pid]
-    session = st.selectbox("Session", participant["trials"])
+    pid = st.selectbox("Participants", all_participants)
+    participant = all_participants[pid]
+    path = participant["path"]
+    trials = all_trials.loc[participant["trials"].keys()]
+    trial_id = st.selectbox("Trial", trials.index)
 
-
-if session:
-    trial = trials.loc[session]
+if trial_id:
+    trial = trials.loc[trial_id]
     df_opti_raw = load_opti(trial["opti_file"])
     df_imu_raw = load_imu(trial["imu_file"])
 
-    metadata = load_metadata(participant["path"])
+    metadata = load_metadata(path)
     global_params = metadata.get("global", {})
     trial_params = Params.from_dict(metadata.get(trial["task"], {}))
 
@@ -107,8 +101,6 @@ if session:
             "Trimmed seconds", 0.0, 5.0, trial_params.trim, 0.1
         )
 
-        result = process_trial(df_opti_raw, df_imu_raw, trial_params)
-
         offset = global_params.get("offset", 0)
         global_params["offset"] = st.slider("Offset seconds", -3.0, 3.0, offset, 0.01)
 
@@ -126,28 +118,38 @@ if session:
             ),
         )
 
-        st.header("Save metadata")
+        st.header("Metadata Actions")
         if st.button("Save parameters to trial"):
-            write_trial_params(participant["path"], trial["task"], trial_params)
-            write_global_params(participant["path"], global_params)
+            write_trial_params(path, trial["task"], trial_params)
+            write_global_params(path, global_params)
 
         if st.button("Save parameters to all trials of participant"):
-            for t in participant["trials"]:
-                trial = trials.loc[t]
-                write_trial_params(participant["path"], trial["task"], trial_params)
-                write_global_params(participant["path"], global_params)
+            for task in trials["task"]:
+                write_trial_params(path, task, trial_params)
+                write_global_params(path, global_params)
 
-        if st.button("Reset parameters"):
-            pprint("Resetting")
+        if st.button("Reset trial parameters"):
+            trial_params = Params()
+            write_trial_params(path, trial["task"], trial_params)
 
+        if st.button("Reset parameters of all trials of participant"):
+            trial_params = Params()
+            for task in trials["task"]:
+                write_trial_params(path, task, trial_params)
+                write_global_params(path, global_params)
+
+        if st.button("Recalculate median offset"):
+            calculate_median_lag(trials, path)
+
+    result = process_trial(df_opti_raw, df_imu_raw, trial_params)
     for unit in displayed_graphs:
-        st.subheader(f"{unit} — {session}")
+        st.subheader(f"{unit} — {trial_id}")
         st.plotly_chart(
-            plot_axes(result, unit, global_params["offset"], trial_params),
+            plot_axes(result, unit, global_params["offset"]),
             width="stretch",
         )
 
-    st.subheader(f"RMS summary — {session}")
+    st.subheader(f"RMS summary — {trial_id}")
     st.dataframe(process_rms(result), width="stretch", hide_index=True)
 
     with st.expander("Raw sample counts"):
@@ -155,7 +157,7 @@ if session:
         st.caption(f"Airpods samples (post-trim): {len(result['imu'])}")
 
 else:
-    st.error(f"No sessions found for participant {pid}.")
+    st.error(f"No trials found for participant {pid}.")
 
 if participant["unmatched"]:
     with st.expander("Unmatched files"):

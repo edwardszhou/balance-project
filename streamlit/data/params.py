@@ -126,6 +126,3 @@ class Params:
             )
         except KeyError:
             return Params()
-
-
-DEFAULT_PARAMS = Params()

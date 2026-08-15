@@ -4,7 +4,7 @@ import pandas as pd
 from scipy.signal import butter, sosfiltfilt, detrend, correlate
 from scipy.integrate import cumulative_trapezoid, trapezoid
 
-from .params import Params, OptiFilters, IMUFilters
+from .params import Params, OptiFilters, IMUFilters, AXIS_OPTIONS
 
 AXES = ["x", "y", "z"]
 UNITS = {
@@ -165,10 +165,19 @@ def process_trial(df_opti: pd.DataFrame, df_imu: pd.DataFrame, trial_params: Par
     t_imu = t_imu[mask_imu]
     df_imu = df_imu[mask_imu]
 
-    return {
-        "opti": process_opti(df_opti, t_opti, trial_params.opti),
-        "imu": process_imu(df_imu, t_imu, trial_params.imu),
-    }
+    result_opti = process_opti(df_opti, t_opti, trial_params.opti)
+    result_imu = process_imu(df_imu, t_imu, trial_params.imu)
+
+    axes_match = [AXIS_OPTIONS[option] for option in trial_params.axes]
+
+    reordered_opti = result_opti.copy()
+    for quantity in UNITS:
+        for i, (axis_idx, fac) in enumerate(axes_match):
+            source = AXES[axis_idx]
+            target = AXES[i]
+            reordered_opti[(quantity, target)] = result_opti[(quantity, source)] * fac
+
+    return {"opti": reordered_opti, "imu": result_imu}
 
 
 def process_rms(result: dict) -> pd.DataFrame:
