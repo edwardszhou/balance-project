@@ -4,12 +4,10 @@ from plotly.subplots import make_subplots
 from data.processing import AXES, UNITS
 
 
-def plot_axes(result: dict, quantity: str, time_offset: float):
-    opti_time = result["opti"].index - time_offset
-    imu_time = result["imu"].index
-    time_min = min(opti_time.min(), imu_time.min())
-    opti_time = opti_time - time_min
-    imu_time = imu_time - time_min
+def plot_axes(result: dict, quantity: str):
+    time_min = min(result["opti"].index.min(), result["imu"].index.min())
+    opti_time = result["opti"].index - time_min
+    imu_time = result["imu"].index - time_min
 
     fig = make_subplots(
         rows=4,

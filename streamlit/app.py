@@ -50,7 +50,7 @@ with st.sidebar:
         metadata = load_metadata(participant_path)
         if not metadata.get("global"):
             participant_trials_df = pd.DataFrame(participant_trials)
-            calculate_median_lag(participant_trials_df, participant_path)
+            lag = calculate_median_lag(participant_trials_df, participant_path)
 
     trials = pd.DataFrame(trials)
 

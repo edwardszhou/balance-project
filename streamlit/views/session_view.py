@@ -9,7 +9,7 @@ from data.loaders import (
     write_trial_params,
     write_global_params,
 )
-from data.processing import process_trial, process_rms, UNITS
+from data.processing import process_trial, process_rms, UNITS, SOURCES
 from data.params import Params, AXIS_OPTIONS
 from data.helpers import calculate_median_lag
 
@@ -131,26 +131,32 @@ if trial_id:
         if st.button("Reset trial parameters"):
             trial_params = Params()
             write_trial_params(path, trial["task"], trial_params)
+            st.rerun()
 
         if st.button("Reset parameters of all trials of participant"):
             trial_params = Params()
             for task in trials["task"]:
                 write_trial_params(path, task, trial_params)
                 write_global_params(path, global_params)
+            st.rerun()
 
         if st.button("Recalculate median offset"):
             calculate_median_lag(trials, path)
+            st.rerun()
 
-    result = process_trial(df_opti_raw, df_imu_raw, trial_params)
+    result = process_trial(df_opti_raw, df_imu_raw, trial_params, global_params)
     for unit in displayed_graphs:
         st.subheader(f"{unit} — {trial_id}")
         st.plotly_chart(
-            plot_axes(result, unit, global_params["offset"]),
+            plot_axes(result, unit),
             width="stretch",
         )
 
     st.subheader(f"RMS summary — {trial_id}")
-    st.dataframe(process_rms(result), width="stretch", hide_index=True)
+    rms_result = process_rms(result)
+    for source, rms_df in rms_result.items():
+        st.markdown(f"**{SOURCES[source]}**")
+        st.dataframe(rms_df.to_frame("RMS").T, width="stretch")
 
     with st.expander("Raw sample counts"):
         st.caption(f"Optitrack samples (post-trim): {len(result['opti'])}")

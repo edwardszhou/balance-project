@@ -10,6 +10,7 @@ from .processing import process_trial, process_ccf
 
 def calculate_median_lag(trials: pd.DataFrame, participant_path: Path) -> float:
     metadata = load_metadata(participant_path)
+    global_params = metadata.get("global", {})
     lags = []
 
     for trial in trials.itertuples():
@@ -17,9 +18,11 @@ def calculate_median_lag(trials: pd.DataFrame, participant_path: Path) -> float:
         df_imu = load_imu(trial.imu_file)
 
         trial_params = Params.from_dict(metadata.get(trial.task, {}))
-        result = process_trial(df_opti, df_imu, trial_params)
+        result = process_trial(df_opti, df_imu, trial_params, global_params)
         lag = process_ccf(result)
         lags.append(lag)
 
-    print(f"Calculating lag for {participant_path.stem}: {np.median(lags)}")
-    write_global_params(participant_path, {"offset": np.median(lags)})
+    median_lag = np.median(lags)
+    print(f"Calculating lag for {participant_path.stem}: {median_lag}")
+    write_global_params(participant_path, {"offset": median_lag})
+    return median_lag

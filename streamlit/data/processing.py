@@ -12,6 +12,7 @@ UNITS = {
     "acceleration": "m/s^2",
     "jerk": "m/s^3",
 }
+SOURCES = {"opti": "Optitrack", "imu": "Airpods", "error": "Error"}
 
 
 def lowpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
@@ -37,12 +38,11 @@ def bandpass(
     return sosfiltfilt(sos, signal)
 
 
-def rms(signal: np.ndarray, time: np.ndarray) -> float:
-    if len(time) < 2:
-        return float("nan")
-    integral = trapezoid(signal**2, time)
+def rms(df: pd.DataFrame) -> pd.Series:
+    time = df.index
+    integral = trapezoid(df**2, time, axis=0)
     duration = time[-1] - time[0]
-    return float(np.sqrt(integral / duration))
+    return pd.Series(np.sqrt(integral / duration), index=df.columns)
 
 
 def process_opti(df: pd.DataFrame, t: np.ndarray, filters: OptiFilters):
@@ -74,14 +74,14 @@ def process_opti(df: pd.DataFrame, t: np.ndarray, filters: OptiFilters):
 
     return pd.DataFrame(
         {
-            ("acceleration", "x"): ax,
-            ("acceleration", "y"): ay,
-            ("acceleration", "z"): az,
-            ("acceleration", "magnitude"): a_magnitude,
             ("velocity", "x"): vx,
             ("velocity", "y"): vy,
             ("velocity", "z"): vz,
             ("velocity", "magnitude"): v_magnitude,
+            ("acceleration", "x"): ax,
+            ("acceleration", "y"): ay,
+            ("acceleration", "z"): az,
+            ("acceleration", "magnitude"): a_magnitude,
             ("jerk", "x"): jx,
             ("jerk", "y"): jy,
             ("jerk", "z"): jz,
@@ -132,14 +132,14 @@ def process_imu(df: pd.DataFrame, t: np.ndarray, filters: IMUFilters):
 
     return pd.DataFrame(
         {
-            ("acceleration", "x"): ax,
-            ("acceleration", "y"): ay,
-            ("acceleration", "z"): az,
-            ("acceleration", "magnitude"): a_magnitude,
             ("velocity", "x"): vx,
             ("velocity", "y"): vy,
             ("velocity", "z"): vz,
             ("velocity", "magnitude"): v_magnitude,
+            ("acceleration", "x"): ax,
+            ("acceleration", "y"): ay,
+            ("acceleration", "z"): az,
+            ("acceleration", "magnitude"): a_magnitude,
             ("jerk", "x"): jx,
             ("jerk", "y"): jy,
             ("jerk", "z"): jz,
@@ -149,52 +149,67 @@ def process_imu(df: pd.DataFrame, t: np.ndarray, filters: IMUFilters):
     )
 
 
-def process_trial(df_opti: pd.DataFrame, df_imu: pd.DataFrame, trial_params: Params):
+def process_error(df_opti: pd.DataFrame, df_imu: pd.DataFrame):
+    t_start = max(df_opti.index.min(), df_imu.index.min())
+    t_end = min(df_opti.index.max(), df_imu.index.max())
+
+    df_opti = df_opti.loc[t_start:t_end].copy()
+    df_imu = df_imu.loc[t_start:t_end].copy()
+
+    t_opti = df_opti.index
+    t_imu = df_imu.index
+
+    df_imu_resampled = df_imu.reindex(t_imu.union(t_opti))
+    df_imu_resampled.interpolate(method="index", inplace=True)
+    df_imu_resampled = df_imu_resampled.loc[t_opti]
+
+    return df_opti - df_imu_resampled
+
+
+def process_trial(
+    df_opti: pd.DataFrame,
+    df_imu: pd.DataFrame,
+    trial_params: Params,
+    global_params: dict,
+):
+    trim = trial_params.trim
+    df_opti = df_opti.loc[
+        df_opti["timestamp"].between(
+            df_opti["timestamp"].iloc[0] + trim,
+            df_opti["timestamp"].iloc[-1] - trim,
+        )
+    ]
+
+    df_imu = df_imu.loc[
+        df_imu["timestampEpoch"].between(
+            df_imu["timestampEpoch"].iloc[0] + trim,
+            df_imu["timestampEpoch"].iloc[-1] - trim,
+        )
+    ]
     t_opti = df_opti["timestamp"].values
     t_imu = df_imu["timestampEpoch"].values
-
-    mask_opti = (t_opti >= t_opti[0] + trial_params.trim) & (
-        t_opti <= t_opti[-1] - trial_params.trim
-    )
-    t_opti = t_opti[mask_opti]
-    df_opti = df_opti[mask_opti]
-
-    mask_imu = (t_imu >= t_imu[0] + trial_params.trim) & (
-        t_imu <= t_imu[-1] - trial_params.trim
-    )
-    t_imu = t_imu[mask_imu]
-    df_imu = df_imu[mask_imu]
 
     result_opti = process_opti(df_opti, t_opti, trial_params.opti)
     result_imu = process_imu(df_imu, t_imu, trial_params.imu)
 
     axes_match = [AXIS_OPTIONS[option] for option in trial_params.axes]
 
-    reordered_opti = result_opti.copy()
+    temp_opti = result_opti.copy()
     for quantity in UNITS:
         for i, (axis_idx, fac) in enumerate(axes_match):
             source = AXES[axis_idx]
             target = AXES[i]
-            reordered_opti[(quantity, target)] = result_opti[(quantity, source)] * fac
+            result_opti[(quantity, target)] = temp_opti[(quantity, source)] * fac
 
-    return {"opti": reordered_opti, "imu": result_imu}
+    result_opti.index -= global_params.get("offset", 0)
+
+    result_error = process_error(result_opti, result_imu)
+
+    return {"opti": result_opti, "imu": result_imu, "error": result_error}
 
 
 def process_rms(result: dict) -> pd.DataFrame:
-    rows = []
-    for source, data in result.items():
-        for quantity in UNITS:
-            rows.append(
-                {
-                    "Source": "Optitrack" if source == "opti" else "Airpods",
-                    "Quantity": quantity,
-                    "RMS y": rms(data[quantity]["y"], data.index),
-                    "RMS x": rms(data[quantity]["x"], data.index),
-                    "RMS z": rms(data[quantity]["z"], data.index),
-                    "RMS magnitude": rms(data[quantity]["magnitude"], data.index),
-                }
-            )
-    return pd.DataFrame(rows)
+    return {source: rms(data) for source, data in result.items()}
 
 
 def process_ccf(result: dict) -> float:
@@ -203,7 +218,6 @@ def process_ccf(result: dict) -> float:
     v_opti = result["opti"]["velocity"]
     v_imu = result["imu"]["velocity"]
 
-    # interpolate airpods velocity onto optitrack timestamps
     imu_vx_resampled = np.interp(t_opti, t_imu, v_imu["x"])
     imu_vy_resampled = np.interp(t_opti, t_imu, v_imu["y"])
     imu_vz_resampled = np.interp(t_opti, t_imu, v_imu["z"])
