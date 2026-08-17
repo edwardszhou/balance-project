@@ -37,7 +37,11 @@ if trial_id:
 
     with st.sidebar:
         st.header("Graph Display")
-        displayed_graphs = st.multiselect("Graphs to display", UNITS, "velocity")
+        displayed_quantities = st.multiselect(
+            "Quantities to display", UNITS, "velocity"
+        )
+        displayed_graphs = st.multiselect("Graphics to display", SOURCES, SOURCES)
+        displayed_graphs = [SOURCES[source] for source in displayed_graphs]
 
         st.header("Filter parameters")
 
@@ -145,18 +149,15 @@ if trial_id:
             st.rerun()
 
     result = process_trial(df_opti_raw, df_imu_raw, trial_params, global_params)
-    for unit in displayed_graphs:
+    for unit in displayed_quantities:
         st.subheader(f"{unit} — {trial_id}")
-        st.plotly_chart(
-            plot_axes(result, unit),
-            width="stretch",
-        )
+        st.plotly_chart(plot_axes(result, unit, displayed_graphs), width="stretch")
 
     st.subheader(f"RMS summary — {trial_id}")
     rms_result = process_rms(result)
-    for source, rms_df in rms_result.items():
-        st.markdown(f"**{SOURCES[source]}**")
-        st.dataframe(rms_df.to_frame("RMS").T, width="stretch")
+    for label, source in SOURCES.items():
+        st.markdown(f"**{label}**")
+        st.dataframe(rms_result[source].to_frame("RMS").T, width="stretch")
 
     with st.expander("Raw sample counts"):
         st.caption(f"Optitrack samples (post-trim): {len(result['opti'])}")

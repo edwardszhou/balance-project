@@ -6,13 +6,13 @@ from scipy.integrate import cumulative_trapezoid, trapezoid
 
 from .params import Params, OptiFilters, IMUFilters, AXIS_OPTIONS
 
-AXES = ["x", "y", "z"]
+AXES = ["x", "y", "z", "magnitude"]
 UNITS = {
     "velocity": "m/s",
     "acceleration": "m/s^2",
     "jerk": "m/s^3",
 }
-SOURCES = {"opti": "Optitrack", "imu": "Airpods", "error": "Error"}
+SOURCES = {"Optitrack": "opti", "Airpods": "imu", "Error": "error"}
 
 
 def lowpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
@@ -163,7 +163,7 @@ def process_error(df_opti: pd.DataFrame, df_imu: pd.DataFrame):
     df_imu_resampled.interpolate(method="index", inplace=True)
     df_imu_resampled = df_imu_resampled.loc[t_opti]
 
-    return df_opti - df_imu_resampled
+    return (df_opti - df_imu_resampled).abs()
 
 
 def process_trial(
