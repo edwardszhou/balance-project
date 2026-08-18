@@ -6,7 +6,7 @@ from data.params import Params
 from data.processing import process_trial, process_rms, SOURCES
 
 st.set_page_config(page_title="Balance Analysis", layout="wide")
-st.title("Balance Project — Aggregate View")
+st.title("Balance Project — Participant View")
 
 all_participants = st.session_state.participants
 all_trials = st.session_state.trials
@@ -24,7 +24,7 @@ global_params = metadata.get("global", {})
 trial_names = []
 opti_aggregate_df = []
 imu_aggregate_df = []
-error_aggregate_df = []
+diff_aggregate_df = []
 
 for trial in trials.reset_index().itertuples():
     df_opti = load_opti(trial.opti_file)
@@ -37,18 +37,18 @@ for trial in trials.reset_index().itertuples():
     trial_names.append(f"{trial.task} {trial.trial_num}")
     opti_aggregate_df.append(rms_result["opti"])
     imu_aggregate_df.append(rms_result["imu"])
-    error_aggregate_df.append(rms_result["error"])
+    diff_aggregate_df.append(rms_result["diff"])
 
 
 opti_aggregate_df = pd.DataFrame(opti_aggregate_df, index=trial_names)
 imu_aggregate_df = pd.DataFrame(imu_aggregate_df, index=trial_names)
-error_aggregate_df = pd.DataFrame(error_aggregate_df, index=trial_names)
+diff_aggregate_df = pd.DataFrame(diff_aggregate_df, index=trial_names)
 
 average_df = pd.DataFrame(
     {
         "Optitrack": opti_aggregate_df.mean(),
         "Airpods": imu_aggregate_df.mean(),
-        "Error": error_aggregate_df.mean(),
+        "Absolute Difference": diff_aggregate_df.mean(),
     }
 )
 
@@ -59,5 +59,5 @@ st.subheader("Optitrack RMS")
 st.dataframe(opti_aggregate_df, width="stretch")
 st.subheader("Airpods RMS")
 st.dataframe(imu_aggregate_df, width="stretch")
-st.subheader("Absolute Error RMS")
-st.dataframe(error_aggregate_df, width="stretch")
+st.subheader("Absolute Difference RMS")
+st.dataframe(diff_aggregate_df, width="stretch")

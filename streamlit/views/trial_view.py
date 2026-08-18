@@ -48,7 +48,7 @@ if trial_task and trial_num:
         displayed_quantities = st.multiselect(
             "Quantities to display", UNITS, "velocity"
         )
-        displayed_graphs = st.multiselect("Graphics to display", SOURCES, SOURCES)
+        displayed_graphs = st.multiselect("Graphs to display", SOURCES, SOURCES)
         displayed_graphs = [SOURCES[source] for source in displayed_graphs]
 
         st.header("Filter parameters")

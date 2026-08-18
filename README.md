@@ -33,3 +33,8 @@ pip install -r requirements.txt
 ```bash
 streamlit run app.py
 ```
+
+TODO:
+- when calculating aggregate metrics, use bypasses if they exist, defaults if not
+  - rmse between sources per participant
+  - rmse between sources per task

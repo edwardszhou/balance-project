@@ -11,12 +11,13 @@ from data.helpers import calculate_median_lag
 
 DEFAULT_BASE_PATH = ""
 
-aggregate_page = st.Page(
-    "views/aggregate_view.py", title="Aggregate View", default=True
+participant_page = st.Page(
+    "views/participant_view.py", title="Participant View", default=True
 )
-session_page = st.Page("views/session_view.py", title="Session View")
+task_page = st.Page("views/task_view.py", title="Task View")
+session_page = st.Page("views/trial_view.py", title="Trial View")
 
-pg = st.navigation([aggregate_page, session_page])
+pg = st.navigation([task_page, participant_page, session_page])
 
 with st.sidebar:
     st.header("Data source")

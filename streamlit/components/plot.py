@@ -6,7 +6,7 @@ from data.processing import AXES, UNITS
 COLORS = {
     "opti": "#2391FF",
     "imu": "#FF6A00",
-    "error": "#ADADAD",
+    "diff": "#ADADAD",
 }
 
 

@@ -12,7 +12,7 @@ UNITS = {
     "acceleration": "m/s^2",
     "jerk": "m/s^3",
 }
-SOURCES = {"Optitrack": "opti", "Airpods": "imu", "Error": "error"}
+SOURCES = {"Optitrack": "opti", "Airpods": "imu", "Abs. Difference": "diff"}
 
 
 def lowpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
@@ -149,7 +149,7 @@ def process_imu(df: pd.DataFrame, t: np.ndarray, filters: IMUFilters):
     )
 
 
-def process_error(df_opti: pd.DataFrame, df_imu: pd.DataFrame):
+def process_diff(df_opti: pd.DataFrame, df_imu: pd.DataFrame):
     t_start = max(df_opti.index.min(), df_imu.index.min())
     t_end = min(df_opti.index.max(), df_imu.index.max())
 
@@ -203,9 +203,9 @@ def process_trial(
 
     result_opti.index -= global_params.get("offset", 0)
 
-    result_error = process_error(result_opti, result_imu)
+    result_diff = process_diff(result_opti, result_imu)
 
-    return {"opti": result_opti, "imu": result_imu, "error": result_error}
+    return {"opti": result_opti, "imu": result_imu, "diff": result_diff}
 
 
 def process_rms(result: dict) -> pd.DataFrame:
