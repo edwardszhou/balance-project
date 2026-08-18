@@ -11,6 +11,9 @@ from .params import Params
 
 
 def split_trial_key(key: tuple[str, ...]):
+    """
+    Split arbitrary name tuple into task, trial #, and participant
+    """
     pid = key[-1]
     if len(key) >= 2 and key[-2].isdigit():
         task = " ".join(key[:-2])
@@ -24,6 +27,11 @@ def split_trial_key(key: tuple[str, ...]):
 
 @cache_data
 def get_trials(base_path: str):
+    """
+    Get all valid trial names for a given path (participant folder). Match files
+    between optitrack and imu based on filename, and process trial data
+    from file name.
+    """
     opti_dir = Path(base_path) / "optitrack"
     imu_dir = Path(base_path) / "airpods"
 
@@ -38,12 +46,13 @@ def get_trials(base_path: str):
 
     matched_keys = opti_map.keys() & imu_map.keys()
 
-    # Form (task, pid) pairs from trials with both sources
+    # Form (task, trial#, pid) tuples from trials with both sources
     matched_trials = {
         split_trial_key(key): (opti_map[key], imu_map[key])
         for key in sorted(matched_keys)
     }
 
+    # Get list of all unmatched files + parent directory (opti/airpods)
     unmatched_trials = sorted(
         f"{p.parent.name}/{p.name}"
         for key, p in opti_map.items() | imu_map.items()
@@ -55,6 +64,11 @@ def get_trials(base_path: str):
 
 @cache_data
 def get_participants(base_path: str):
+    """
+    Find all valid participant folders in the given directory.
+    Participant folder is valid if it contains optitrack and airpods
+    subdirectories.
+    """
     base_path = Path(base_path)
     if not base_path.exists():
         return []
@@ -70,6 +84,10 @@ def get_participants(base_path: str):
 
 @cache_data
 def load_opti(filename: Path) -> pd.DataFrame:
+    """
+    Load optitrack file into dataframe and standardize units.
+    Optitrack files are assumed to have been exported from Motive as csvs.
+    """
     with open(filename, "r") as f:
         metadata = next(f)
         meta = metadata.split(",")
@@ -81,6 +99,7 @@ def load_opti(filename: Path) -> pd.DataFrame:
     )
     start_time = start_time.replace(tzinfo=ZoneInfo("America/New_York"))
 
+    # Trim unnecessary metadata from csv header, flatten columns
     df = df.iloc[:, :8]
     df.columns = [
         "_".join([i.lower() for i in col if "Unnamed" not in i]) for col in df.columns
@@ -103,6 +122,12 @@ def load_opti(filename: Path) -> pd.DataFrame:
 
 @cache_data
 def load_imu(filename: Path) -> pd.DataFrame:
+    """
+    Load airpods IMU data file into dataframe and standardize units.
+    Airpods files are assuemd to have been either exported from the
+    Balance Project app as csv, exported as json, or downloaded from the
+    database as json.
+    """
     try:
         df = pd.read_csv(filename)
         df = df.rename(
@@ -126,7 +151,9 @@ def load_imu(filename: Path) -> pd.DataFrame:
             }
         )
 
+    # Exclude IMU data from iPhone
     df = df[df["source"] == "airpods"]
+
     # Convert Gs to m/s^2, ms to seconds
     df["ax"] *= -9.81
     df["ay"] *= -9.81
@@ -136,6 +163,7 @@ def load_imu(filename: Path) -> pd.DataFrame:
 
 
 def load_metadata(participant_path: Path) -> dict:
+    """Load metadata json for partcipant."""
     filename = participant_path / "metadata.json"
     try:
         with open(filename, "r") as f:
@@ -145,14 +173,18 @@ def load_metadata(participant_path: Path) -> dict:
 
 
 def write_trial_params(participant_path: Path, trial: str, params: Params):
+    """Write trial parameters to metadata.json for participant"""
     write_metadata(participant_path, {trial: params.to_dict()})
 
 
 def write_global_params(participant_path: Path, updates: dict):
+    """Write globa parameters to metadata.json for participant"""
     write_metadata(participant_path, {"global": updates})
 
 
 def write_metadata(participant_path: Path, updates: dict):
+    """Update metadata.json for participant"""
+
     filename = participant_path / "metadata.json"
     metadata = load_metadata(participant_path)
     metadata.update(updates)

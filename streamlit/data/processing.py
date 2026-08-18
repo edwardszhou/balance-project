@@ -16,6 +16,7 @@ SOURCES = {"Optitrack": "opti", "Airpods": "imu", "Abs. Difference": "diff"}
 
 
 def lowpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
+    """Apply lowpass butterworth filter to a signal"""
     dt = np.median(np.diff(time))
     fs = 1 / dt
     sos = butter(order, cutoff / (0.5 * fs), btype="lowpass", output="sos")
@@ -23,6 +24,7 @@ def lowpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
 
 
 def highpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
+    """Apply highpass butterworth filter to a signal"""
     dt = np.median(np.diff(time))
     fs = 1 / dt
     sos = butter(order, cutoff / (0.5 * fs), btype="highpass", output="sos")
@@ -32,6 +34,7 @@ def highpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
 def bandpass(
     signal: np.ndarray, time: np.ndarray, cutoff: tuple[float, float], order=4
 ):
+    """Apply bandpass butterworth filter to a signal"""
     dt = np.median(np.diff(time))
     fs = 1 / dt
     sos = butter(order, cutoff / (0.5 * fs), btype="bandpass", output="sos")
@@ -39,6 +42,7 @@ def bandpass(
 
 
 def rms(df: pd.DataFrame) -> pd.Series:
+    """Calculate time-weighted root mean square of dataframe"""
     time = df.index
     integral = trapezoid(df**2, time, axis=0)
     duration = time[-1] - time[0]
@@ -46,6 +50,10 @@ def rms(df: pd.DataFrame) -> pd.Series:
 
 
 def process_opti(df: pd.DataFrame, t: np.ndarray, filters: OptiFilters):
+    """
+    Process raw optitrack data (position)
+    Apply filters and differentiate to obtain vel, acc, jerk
+    """
     px = df["px"].values
     py = df["py"].values
     pz = df["pz"].values
@@ -92,8 +100,12 @@ def process_opti(df: pd.DataFrame, t: np.ndarray, filters: OptiFilters):
 
 
 def process_imu(df: pd.DataFrame, t: np.ndarray, filters: IMUFilters):
+    """
+    Process raw IMU data (acceleration)
+    Apply filters and integrate/differentiate to obtain pos, acc, jerk
+    """
 
-    # Bandpass -> Integration -> Detrend
+    # Detrend -> Filter -> Integration -> Detrend
     ax = df["ax"].values
     ay = df["ay"].values
     az = df["az"].values
@@ -150,6 +162,9 @@ def process_imu(df: pd.DataFrame, t: np.ndarray, filters: IMUFilters):
 
 
 def process_diff(df_opti: pd.DataFrame, df_imu: pd.DataFrame):
+    """
+    Get velocity difference between optitrack and IMU data over common time period
+    """
     t_start = max(df_opti.index.min(), df_imu.index.min())
     t_end = min(df_opti.index.max(), df_imu.index.max())
 
@@ -159,6 +174,7 @@ def process_diff(df_opti: pd.DataFrame, df_imu: pd.DataFrame):
     t_opti = df_opti.index
     t_imu = df_imu.index
 
+    # IMU data is recorded at 50hz, needs to be resampled to Optitrack timestamps (120hz)
     df_imu_resampled = df_imu.reindex(t_imu.union(t_opti))
     df_imu_resampled.interpolate(method="index", inplace=True)
     df_imu_resampled = df_imu_resampled.loc[t_opti]
@@ -172,6 +188,13 @@ def process_trial(
     trial_params: Params,
     global_params: dict,
 ):
+    """
+    Process raw data from optitrack and IMU into dataframe.
+    Data from sensors are both first trimmed at the start and end, then
+    processed. Then, axes are aligned between the two sources and
+    time offset is applied.
+    """
+
     trim = trial_params.trim
     df_opti = df_opti.loc[
         df_opti["timestamp"].between(
@@ -179,7 +202,6 @@ def process_trial(
             df_opti["timestamp"].iloc[-1] - trim,
         )
     ]
-
     df_imu = df_imu.loc[
         df_imu["timestampEpoch"].between(
             df_imu["timestampEpoch"].iloc[0] + trim,
@@ -192,8 +214,8 @@ def process_trial(
     result_opti = process_opti(df_opti, t_opti, trial_params.opti)
     result_imu = process_imu(df_imu, t_imu, trial_params.imu)
 
+    # Swap data for different axes in optitrack
     axes_match = [AXIS_OPTIONS[option] for option in trial_params.axes]
-
     temp_opti = result_opti.copy()
     for quantity in UNITS:
         for i, (axis_idx, fac) in enumerate(axes_match):
@@ -209,15 +231,21 @@ def process_trial(
 
 
 def process_rms(result: dict) -> pd.DataFrame:
+    """Process RMS for all signals"""
     return {source: rms(data) for source, data in result.items()}
 
 
 def process_ccf(result: dict) -> float:
+    """
+    Calculate optimal time offset between optitrack and IMU velocity signals.
+    Find max cross correlation at a specific lag.
+    """
     t_opti = result["opti"].index
     t_imu = result["imu"].index
     v_opti = result["opti"]["velocity"]
     v_imu = result["imu"]["velocity"]
 
+    # Resample 50hz IMU signal to 120hz optitrack signal to cross correlate
     imu_vx_resampled = np.interp(t_opti, t_imu, v_imu["x"])
     imu_vy_resampled = np.interp(t_opti, t_imu, v_imu["y"])
     imu_vz_resampled = np.interp(t_opti, t_imu, v_imu["z"])

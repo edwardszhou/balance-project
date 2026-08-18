@@ -26,6 +26,7 @@ opti_aggregate_df = []
 imu_aggregate_df = []
 diff_aggregate_df = []
 
+# Get RMS for all trials with the specified participant (after processing data)
 for trial in trials.reset_index().itertuples():
     df_opti = load_opti(trial.opti_file)
     df_imu = load_imu(trial.imu_file)

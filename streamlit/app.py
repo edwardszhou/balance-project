@@ -26,6 +26,12 @@ with st.sidebar:
     participant_list = get_participants(base_path)
     participants = {}
 
+    # Build overall dataframes for participants and trials
+    #
+    # Task: type of task recorded (i.e. STS)
+    # Participant: participant ID
+    # Trial Number: iteration of the task (1-3)
+    # Trial: Combination of task, participant, and trial number
     all_trials = []
     for pid in participant_list:
         participant_path = Path(base_path) / pid
@@ -46,7 +52,8 @@ with st.sidebar:
             for trial_key, (opti_file, imu_file) in trials.items()
         ]
         all_trials.extend(participant_trials)
-        # if no precomputed cc lag, calculate
+
+        # if no precomputed cross correlation lag, calculate
         metadata = load_metadata(participant_path)
         if not metadata.get("global"):
             participant_trials_df = pd.DataFrame(participant_trials)

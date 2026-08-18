@@ -20,6 +20,7 @@ all_participants = st.session_state.participants
 all_trials = st.session_state.trials
 
 with st.sidebar:
+    # Identify unique trial via combination of participant, task, and trial #
     col1, col2, col3 = st.columns(3)
     pid = col1.selectbox("Participant", all_participants)
     participant = all_participants[pid]
@@ -39,6 +40,7 @@ if trial_task and trial_num:
     df_opti_raw = load_opti(trial["opti_file"])
     df_imu_raw = load_imu(trial["imu_file"])
 
+    # if exists, get saved filter / processing parameters. otherwise, use default
     metadata = load_metadata(path)
     global_params = metadata.get("global", {})
     trial_params = Params.from_dict(metadata.get(f"{trial_task} {trial_num}", {}))
@@ -116,6 +118,8 @@ if trial_task and trial_num:
         trial_params.trim = col1.slider(
             "Trimmed seconds", 0.0, 5.0, trial_params.trim, 0.1
         )
+        # Offset is global parameter; affects all trials of a given participant.
+        # See calculate_median_lag for explanation
         offset = global_params.get("offset", 0)
         global_params["offset"] = col2.slider(
             "Offset seconds (global)", -3.0, 3.0, offset, 0.01
