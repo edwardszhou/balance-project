@@ -64,14 +64,15 @@ if trial_task and trial_num:
             trial_params.opti[label].active = label in active_opti
 
         if trial_params.opti.lowpass.active:
-            trial_params.opti.lowpass.cutoff = st.slider(
+            col1, col2 = st.columns(2)
+            trial_params.opti.lowpass.cutoff = col1.slider(
                 "Optitrack lowpass cutoff (Hz)",
                 5.0,
                 20.0,
                 trial_params.opti.lowpass.cutoff,
                 0.5,
             )
-            trial_params.opti.lowpass.order = st.slider(
+            trial_params.opti.lowpass.order = col2.slider(
                 "Optitrack lowpass order", 1, 4, trial_params.opti.lowpass.order
             )
 
@@ -86,35 +87,39 @@ if trial_task and trial_num:
             trial_params.imu[label].active = label in active_imu
 
         if trial_params.imu.lowpass.active:
-            trial_params.imu.lowpass.cutoff = st.slider(
+            col1, col2 = st.columns(2)
+            trial_params.imu.lowpass.cutoff = col1.slider(
                 "Airpods lowpass cutoff (Hz)",
                 5.0,
                 20.0,
                 trial_params.imu.lowpass.cutoff,
                 0.5,
             )
-            trial_params.imu.lowpass.order = st.slider(
+            trial_params.imu.lowpass.order = col2.slider(
                 "Airpods lowpass order", 1, 4, trial_params.imu.lowpass.order
             )
         if trial_params.imu.highpass.active:
-            trial_params.imu.highpass.cutoff = st.slider(
+            col1, col2 = st.columns(2)
+            trial_params.imu.highpass.cutoff = col1.slider(
                 "Airpods highpass cutoff (Hz)",
                 0.01,
                 0.5,
                 trial_params.imu.highpass.cutoff,
                 0.01,
             )
-            trial_params.imu.highpass.order = st.slider(
+            trial_params.imu.highpass.order = col2.slider(
                 "Airpods highpass order", 1, 4, trial_params.imu.highpass.order
             )
 
         st.header("Time")
-        trial_params.trim = st.slider(
+        col1, col2 = st.columns(2)
+        trial_params.trim = col1.slider(
             "Trimmed seconds", 0.0, 5.0, trial_params.trim, 0.1
         )
-
         offset = global_params.get("offset", 0)
-        global_params["offset"] = st.slider("Offset seconds", -3.0, 3.0, offset, 0.01)
+        global_params["offset"] = col2.slider(
+            "Offset seconds (global)", -3.0, 3.0, offset, 0.01
+        )
 
         st.header("Manipulate axes")
         st.caption("Change optitrack axes to match airpods")
@@ -131,28 +136,29 @@ if trial_task and trial_num:
         )
 
         st.header("Metadata Actions")
-        if st.button("Save parameters to trial"):
+        col1, col2 = st.columns(2)
+        if col1.button("Save parameters to trial", width="stretch"):
             write_trial_params(path, trial_id, trial_params)
             write_global_params(path, global_params)
 
-        if st.button("Save parameters to all trials of participant"):
+        if col1.button("Save parameters to all trials of participant", width="stretch"):
             for t in trial_indexes:
                 write_trial_params(path, t, trial_params)
                 write_global_params(path, global_params)
 
-        if st.button("Reset trial parameters"):
+        if col2.button("Reset trial parameters", width="stretch"):
             trial_params = Params()
             write_trial_params(path, trial_id, trial_params)
             st.rerun()
 
-        if st.button("Reset parameters of all trials of participant"):
+        if col2.button("Reset all trials of participant", width="stretch"):
             trial_params = Params()
             for t in trial_indexes:
                 write_trial_params(path, t, trial_params)
-                write_global_params(path, global_params)
+                write_global_params(path, {})
             st.rerun()
 
-        if st.button("Recalculate median offset"):
+        if st.button("Recalculate median offset", width="stretch"):
             calculate_median_lag(trials, path)
             st.rerun()
 
