@@ -10,15 +10,16 @@ from .processing import process_trial, process_ccf
 
 def calculate_median_lag(trials: pd.DataFrame, participant_path: Path) -> float:
     metadata = load_metadata(participant_path)
-    global_params = metadata.get("global", {})
     lags = []
 
-    for trial in trials.itertuples():
+    for trial in trials.reset_index().itertuples():
         df_opti = load_opti(trial.opti_file)
         df_imu = load_imu(trial.imu_file)
 
-        trial_params = Params.from_dict(metadata.get(trial.task, {}))
-        result = process_trial(df_opti, df_imu, trial_params, global_params)
+        trial_params = Params.from_dict(
+            metadata.get(f"{trial.task} {trial.trial_num}", {})
+        )
+        result = process_trial(df_opti, df_imu, trial_params, {})
         lag = process_ccf(result)
         lags.append(lag)
 

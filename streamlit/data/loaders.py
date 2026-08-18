@@ -10,8 +10,20 @@ from streamlit import cache_data
 from .params import Params
 
 
+def split_trial_key(key: tuple[str, ...]):
+    pid = key[-1]
+    if len(key) >= 2 and key[-2].isdigit():
+        task = " ".join(key[:-2])
+        number = key[-2]
+    else:
+        task = " ".join(key[:-1])
+        number = "1"
+
+    return task, number, pid
+
+
 @cache_data
-def get_sessions(base_path: str):
+def get_trials(base_path: str):
     opti_dir = Path(base_path) / "optitrack"
     imu_dir = Path(base_path) / "airpods"
 
@@ -25,17 +37,20 @@ def get_sessions(base_path: str):
     imu_map = {tuple(re.split(r"[-_ ]+", p.stem)): p for p in imu_files}
 
     matched_keys = opti_map.keys() & imu_map.keys()
-    matched_sessions = {
-        " ".join(key): (opti_map[key], imu_map[key])
-        for key in sorted(opti_map.keys() & imu_map.keys())
+
+    # Form (task, pid) pairs from trials with both sources
+    matched_trials = {
+        split_trial_key(key): (opti_map[key], imu_map[key])
+        for key in sorted(matched_keys)
     }
-    unmatched_sessions = sorted(
+
+    unmatched_trials = sorted(
         f"{p.parent.name}/{p.name}"
         for key, p in opti_map.items() | imu_map.items()
         if key not in matched_keys
     )
 
-    return matched_sessions, unmatched_sessions
+    return matched_trials, unmatched_trials
 
 
 @cache_data

@@ -13,27 +13,35 @@ from data.processing import process_trial, process_rms, UNITS, SOURCES
 from data.params import Params, AXIS_OPTIONS
 from data.helpers import calculate_median_lag
 
-st.set_page_config(page_title="Balance Participant Analysis", layout="wide")
-st.title("Balance Project — Participant View")
+st.set_page_config(page_title="Balance Analysis", layout="wide")
+st.title("Balance Project — Session View")
 
 all_participants = st.session_state.participants
 all_trials = st.session_state.trials
 
 with st.sidebar:
-    pid = st.selectbox("Participants", all_participants)
+    col1, col2, col3 = st.columns(3)
+    pid = col1.selectbox("Participant", all_participants)
     participant = all_participants[pid]
     path = participant["path"]
-    trials = all_trials.loc[participant["trials"].keys()]
-    trial_id = st.selectbox("Trial", trials.index)
 
-if trial_id:
-    trial = trials.loc[trial_id]
+    trials = all_trials.loc[pid]
+    trial_indexes = trials.index.map(lambda x: f"{x[0]} {x[1]}")
+    trial_task = col2.selectbox("Task", trials.index.get_level_values("task").unique())
+    trial_num = col3.selectbox(
+        "Trial", trials.loc[trial_task].index.get_level_values("trial_num")
+    )
+    trial_id = f"{trial_task} {trial_num}"
+
+
+if trial_task and trial_num:
+    trial = trials.loc[(trial_task, trial_num)]
     df_opti_raw = load_opti(trial["opti_file"])
     df_imu_raw = load_imu(trial["imu_file"])
 
     metadata = load_metadata(path)
     global_params = metadata.get("global", {})
-    trial_params = Params.from_dict(metadata.get(trial["task"], {}))
+    trial_params = Params.from_dict(metadata.get(f"{trial_task} {trial_num}", {}))
 
     with st.sidebar:
         st.header("Graph Display")
@@ -124,23 +132,23 @@ if trial_id:
 
         st.header("Metadata Actions")
         if st.button("Save parameters to trial"):
-            write_trial_params(path, trial["task"], trial_params)
+            write_trial_params(path, trial_id, trial_params)
             write_global_params(path, global_params)
 
         if st.button("Save parameters to all trials of participant"):
-            for task in trials["task"]:
-                write_trial_params(path, task, trial_params)
+            for t in trial_indexes:
+                write_trial_params(path, t, trial_params)
                 write_global_params(path, global_params)
 
         if st.button("Reset trial parameters"):
             trial_params = Params()
-            write_trial_params(path, trial["task"], trial_params)
+            write_trial_params(path, trial_id, trial_params)
             st.rerun()
 
         if st.button("Reset parameters of all trials of participant"):
             trial_params = Params()
-            for task in trials["task"]:
-                write_trial_params(path, task, trial_params)
+            for t in trial_indexes:
+                write_trial_params(path, t, trial_params)
                 write_global_params(path, global_params)
             st.rerun()
 
@@ -150,10 +158,10 @@ if trial_id:
 
     result = process_trial(df_opti_raw, df_imu_raw, trial_params, global_params)
     for unit in displayed_quantities:
-        st.subheader(f"{unit} — {trial_id}")
+        st.subheader(f"{unit} — {trial_task} {trial_num}")
         st.plotly_chart(plot_axes(result, unit, displayed_graphs), width="stretch")
 
-    st.subheader(f"RMS summary — {trial_id}")
+    st.subheader(f"RMS summary — {trial_task} {trial_num}")
     rms_result = process_rms(result)
     for label, source in SOURCES.items():
         st.markdown(f"**{label}**")
