@@ -49,6 +49,11 @@ class OptiFilters:
             f.metadata["label"] for f in fields(self) if getattr(self, f.name).active
         ]
 
+    def __getitem__(self, key: str) -> FilterParams:
+        label_fields = self.label_fields()
+        key = label_fields[key] if key in label_fields else key
+        return getattr(self, key)
+
 
 @dataclass
 class IMUFilters:
@@ -81,6 +86,11 @@ class IMUFilters:
         return [
             f.metadata["label"] for f in fields(self) if getattr(self, f.name).active
         ]
+
+    def __getitem__(self, key: str) -> FilterParams:
+        label_fields = self.label_fields()
+        key = label_fields[key] if key in label_fields else key
+        return getattr(self, key)
 
 
 @dataclass
