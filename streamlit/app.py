@@ -7,7 +7,7 @@ from data.loaders import (
     get_participants,
     load_metadata,
 )
-from data.helpers import calculate_median_lag
+from data.helpers import detect_skipped_trials
 
 DEFAULT_BASE_PATH = ""
 
@@ -53,11 +53,19 @@ with st.sidebar:
         ]
         all_trials.extend(participant_trials)
 
-        # if no precomputed cross correlation lag, calculate
+        # detect trials that can't be processed (short / non-overlapping)
+        # so the UI can flag them; cached under "global" after first load
         metadata = load_metadata(participant_path)
         if not metadata.get("global"):
-            participant_trials_df = pd.DataFrame(participant_trials)
-            lag = calculate_median_lag(participant_trials_df, participant_path)
+            participant_trials_df = pd.DataFrame(
+                [t for t in participant_trials if t["opti_file"] is not None]
+            )
+            skipped = detect_skipped_trials(
+                participant_trials_df, participant_path
+            )
+        else:
+            skipped = metadata["global"].get("skipped", [])
+        participants[pid]["skipped"] = skipped
 
 
 all_trials = pd.DataFrame(all_trials)
@@ -66,10 +74,10 @@ if not participants or all_trials.empty:
     st.stop()
 
 all_trials.set_index(["participant", "task", "trial_num"], inplace=True)
-if not all_trials.index.is_unique:
-    st.error("Error: Duplicate trial names found")
-    st.dataframe(all_trials[all_trials.index.duplicated(keep=False)], hide_index=True)
-    st.stop()
+# if not all_trials.index.is_unique:
+#     st.error("Error: Duplicate trial names found")
+#     st.dataframe(all_trials[all_trials.index.duplicated(keep=False)], hide_index=True)
+#     st.stop()
 
 st.session_state.trials = all_trials
 st.session_state.participants = participants

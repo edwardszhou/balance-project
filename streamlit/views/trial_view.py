@@ -1,3 +1,5 @@
+import copy
+import pandas as pd
 import streamlit as st
 from pprint import pprint
 
@@ -7,11 +9,16 @@ from data.loaders import (
     load_imu,
     load_metadata,
     write_trial_params,
-    write_global_params,
 )
-from data.processing import process_trial, process_rms, UNITS, SOURCES
+from data.processing import (
+    process_trial,
+    process_rms,
+    TrialProcessingError,
+    UNITS,
+    SOURCES,
+)
 from data.params import Params, AXIS_OPTIONS
-from data.helpers import calculate_median_lag
+from data.helpers import auto_align
 
 st.set_page_config(page_title="Balance Analysis", layout="wide")
 st.title("Balance Project — Session View")
@@ -37,12 +44,12 @@ with st.sidebar:
 
 if trial_task and trial_num:
     trial = trials.loc[(trial_task, trial_num)]
-    df_opti_raw = load_opti(trial["opti_file"])
+    has_opti = pd.notna(trial["opti_file"])
+    df_opti_raw = load_opti(trial["opti_file"]) if has_opti else None
     df_imu_raw = load_imu(trial["imu_file"])
 
     # if exists, get saved filter / processing parameters. otherwise, use default
     metadata = load_metadata(path)
-    global_params = metadata.get("global", {})
     trial_params = Params.from_dict(metadata.get(f"{trial_task} {trial_num}", {}))
 
     with st.sidebar:
@@ -50,8 +57,9 @@ if trial_task and trial_num:
         displayed_quantities = st.multiselect(
             "Quantities to display", UNITS, "velocity"
         )
-        displayed_graphs = st.multiselect("Graphs to display", SOURCES, SOURCES)
-        displayed_graphs = [SOURCES[source] for source in displayed_graphs]
+        sources = SOURCES if has_opti else {"Airpods": "imu"}
+        displayed_graphs = st.multiselect("Graphs to display", sources, sources)
+        displayed_graphs = [sources[source] for source in displayed_graphs]
 
         st.header("Filter parameters")
 
@@ -118,11 +126,10 @@ if trial_task and trial_num:
         trial_params.trim = col1.slider(
             "Trimmed seconds", 0.0, 5.0, trial_params.trim, 0.1
         )
-        # Offset is global parameter; affects all trials of a given participant.
-        # See calculate_median_lag for explanation
-        offset = global_params.get("offset", 0)
-        global_params["offset"] = col2.slider(
-            "Offset seconds (global)", -3.0, 3.0, offset, 0.01
+        # Offset is a per-trial parameter -- device clocks drift between
+        # trials, so each trial gets its own time offset.
+        trial_params.offset = col2.slider(
+            "Offset seconds", -3.0, 3.0, trial_params.offset, 0.01
         )
 
         st.header("Manipulate axes")
@@ -143,12 +150,14 @@ if trial_task and trial_num:
         col1, col2 = st.columns(2)
         if col1.button("Save parameters to trial", width="stretch"):
             write_trial_params(path, trial_id, trial_params)
-            write_global_params(path, global_params)
 
         if col1.button("Save parameters to all trials of participant", width="stretch"):
+            # propagate filters / trim / axes to every trial, but keep each
+            # trial's own offset (offset is per-trial, not shared)
             for t in trial_indexes:
-                write_trial_params(path, t, trial_params)
-                write_global_params(path, global_params)
+                params_t = copy.deepcopy(trial_params)
+                params_t.offset = Params.from_dict(metadata.get(t, {})).offset
+                write_trial_params(path, t, params_t)
 
         if col2.button("Reset trial parameters", width="stretch"):
             trial_params = Params()
@@ -159,26 +168,58 @@ if trial_task and trial_num:
             trial_params = Params()
             for t in trial_indexes:
                 write_trial_params(path, t, trial_params)
-                write_global_params(path, {})
             st.rerun()
 
-        if st.button("Recalculate median offset", width="stretch"):
-            calculate_median_lag(trials, path)
-            st.rerun()
+        if has_opti and st.button("Auto align", width="stretch"):
+            with st.spinner("Searching axis mappings and offset..."):
+                try:
+                    axes, offset, score = auto_align(
+                        df_opti_raw, df_imu_raw, trial_params
+                    )
+                except ValueError as e:
+                    st.warning(f"Can't auto-align {trial_id}: {e}")
+                else:
+                    trial_params.axes = list(axes)
+                    trial_params.offset = offset
+                    write_trial_params(path, trial_id, trial_params)
+                    st.session_state["auto_align_result"] = {
+                        "trial": trial_id,
+                        "axes": list(axes),
+                        "offset": offset,
+                        "score": score,
+                    }
+                    st.rerun()
 
-    result = process_trial(df_opti_raw, df_imu_raw, trial_params, global_params)
+    aligned = st.session_state.pop("auto_align_result", None)
+    if aligned and aligned["trial"] == trial_id:
+        st.success(
+            f"Auto-aligned {trial_id}: axes {aligned['axes']}, "
+            f"offset {aligned['offset']:.3f}s "
+            f"(velocity diff score {aligned['score']:.4f})"
+        )
+
+    try:
+        result = process_trial(
+            df_opti_raw, df_imu_raw, trial_params
+        )
+    except TrialProcessingError as e:
+        st.warning(
+            f"Trial {trial_task} {trial_num} can't be processed: {e}"
+        )
+        st.stop()
     for unit in displayed_quantities:
         st.subheader(f"{unit} — {trial_task} {trial_num}")
         st.plotly_chart(plot_axes(result, unit, displayed_graphs), width="stretch")
 
     st.subheader(f"RMS summary — {trial_task} {trial_num}")
     rms_result = process_rms(result)
-    for label, source in SOURCES.items():
+    for label, source in sources.items():
         st.markdown(f"**{label}**")
         st.dataframe(rms_result[source].to_frame("RMS").T, width="stretch")
 
     with st.expander("Raw sample counts"):
-        st.caption(f"Optitrack samples (post-trim): {len(result['opti'])}")
+        if has_opti:
+            st.caption(f"Optitrack samples (post-trim): {len(result['opti'])}")
         st.caption(f"Airpods samples (post-trim): {len(result['imu'])}")
 
 else:
@@ -187,3 +228,7 @@ else:
 if participant["unmatched"]:
     with st.expander("Unmatched files"):
         st.caption("\n\n".join(participant["unmatched"]))
+
+if participant.get("skipped"):
+    with st.expander("Skipped trials (too short to process)"):
+        st.caption("\n\n".join(participant["skipped"]))

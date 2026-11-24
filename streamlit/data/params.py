@@ -99,6 +99,7 @@ class Params:
     imu: IMUFilters = field(default_factory=IMUFilters)
     trim: float = 1.5
     axes: list = field(default_factory=lambda: list(AXIS_OPTIONS)[:3])
+    offset: float = 0.0
 
     def to_json(self):
         return json.dumps(asdict(self))
@@ -124,6 +125,7 @@ class Params:
                 ),
                 trim=data["trim"],
                 axes=data["axes"],
+                offset=data.get("offset", 0.0),
             )
         except KeyError:
             return Params()

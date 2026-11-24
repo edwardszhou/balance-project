@@ -12,8 +12,12 @@ from .params import Params
 
 def split_trial_key(key: tuple[str, ...]):
     """
-    Split arbitrary name tuple into task, trial #, and participant
+    Split arbitrary name tuple into task, trial #, and participant.
+    Supports TASK-TRIAL-PID (e.g. FT-EC-1-196) and PID_TASK_TRIAL (e.g. AL_CL_1).
     """
+    if len(key) >= 3 and key[-1].isdigit() and not key[-2].isdigit():
+        return " ".join(key[1:-1]).upper(), key[-1], key[0]
+
     pid = key[-1]
     if len(key) >= 2 and key[-2].isdigit():
         task = " ".join(key[:-2])
@@ -35,11 +39,16 @@ def get_trials(base_path: str):
     opti_dir = Path(base_path) / "optitrack"
     imu_dir = Path(base_path) / "airpods"
 
-    if not opti_dir.exists() or not imu_dir.exists():
-        return []
+    opti_files = list(opti_dir.glob("*.csv")) if opti_dir.exists() else []
+    imu_files = list(imu_dir.glob("*.csv")) if imu_dir.exists() else []
 
-    opti_files = list(opti_dir.glob("*.csv"))
-    imu_files = list(imu_dir.glob("*.csv"))
+    # Airpods-only participant: every airpods file is a trial without optitrack
+    if imu_files and not opti_files:
+        imu_only = {
+            split_trial_key(tuple(re.split(r"[-_ ]+", p.stem))): (None, p)
+            for p in sorted(imu_files)
+        }
+        return imu_only, []
 
     opti_map = {tuple(re.split(r"[-_ ]+", p.stem)): p for p in opti_files}
     imu_map = {tuple(re.split(r"[-_ ]+", p.stem)): p for p in imu_files}

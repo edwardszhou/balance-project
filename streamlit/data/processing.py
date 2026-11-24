@@ -15,6 +15,36 @@ UNITS = {
 SOURCES = {"Optitrack": "opti", "Airpods": "imu", "Abs. Difference": "diff"}
 
 
+class TrialProcessingError(ValueError):
+    """Base for trials that cannot be processed and should be skipped."""
+
+
+class TrialTooShortError(TrialProcessingError):
+    """
+    Raised when a trial has no samples left after trimming, i.e. the
+    usable recording is shorter than twice the trim window. Such a trial
+    cannot be processed and should be skipped rather than crashing the
+    pipeline (e.g. an Airpods stream that dropped out after ~2s).
+    """
+
+
+class TrialNoImuDataError(TrialProcessingError):
+    """
+    Raised when the airpods file has no airpods samples, e.g. the recording
+    only captured iPhone IMU data (rows with source == "phone"), which is
+    filtered out on load.
+    """
+
+
+class TrialNoOverlapError(TrialProcessingError):
+    """
+    Raised when the optitrack and airpods recordings for a trial do not
+    overlap in time, so there is no common window to compare. Usually means
+    the two files were mismatched -- e.g. an optitrack export paired with an
+    airpods recording from a different trial.
+    """
+
+
 def lowpass(signal: np.ndarray, time: np.ndarray, cutoff: float, order=4):
     """Apply lowpass butterworth filter to a signal"""
     dt = np.median(np.diff(time))
@@ -182,11 +212,24 @@ def process_diff(df_opti: pd.DataFrame, df_imu: pd.DataFrame):
     return (df_opti - df_imu_resampled).abs()
 
 
+def process_imu_only(df_imu: pd.DataFrame, trial_params: Params):
+    """Process a trial that only has airpods data (no optitrack)."""
+    trim = trial_params.trim
+    t = df_imu["timestampEpoch"]
+    df_imu = df_imu.loc[t.between(t.iloc[0] + trim, t.iloc[-1] - trim)]
+    if len(df_imu) == 0:
+        raise TrialTooShortError(
+            f"No samples left after trimming {trim}s from each end."
+        )
+    return {
+        "imu": process_imu(df_imu, df_imu["timestampEpoch"].values, trial_params.imu)
+    }
+
+
 def process_trial(
     df_opti: pd.DataFrame,
     df_imu: pd.DataFrame,
     trial_params: Params,
-    global_params: dict,
 ):
     """
     Process raw data from optitrack and IMU into dataframe.
@@ -196,6 +239,14 @@ def process_trial(
     """
 
     trim = trial_params.trim
+    if len(df_imu) == 0:
+        raise TrialNoImuDataError(
+            "Airpods file contains no airpods samples (only iPhone data was "
+            "recorded)."
+        )
+    if df_opti is None:
+        return process_imu_only(df_imu, trial_params)
+
     df_opti = df_opti.loc[
         df_opti["timestamp"].between(
             df_opti["timestamp"].iloc[0] + trim,
@@ -208,6 +259,13 @@ def process_trial(
             df_imu["timestampEpoch"].iloc[-1] - trim,
         )
     ]
+    if len(df_opti) == 0 or len(df_imu) == 0:
+        raise TrialTooShortError(
+            f"No samples left after trimming {trim}s from each end "
+            f"(opti={len(df_opti)}, imu={len(df_imu)}); the usable "
+            "recording is shorter than the trim window."
+        )
+
     t_opti = df_opti["timestamp"].values
     t_imu = df_imu["timestampEpoch"].values
 
@@ -223,9 +281,14 @@ def process_trial(
             target = AXES[i]
             result_opti[(quantity, target)] = temp_opti[(quantity, source)] * fac
 
-    result_opti.index -= global_params.get("offset", 0)
+    result_opti.index -= trial_params.offset
 
     result_diff = process_diff(result_opti, result_imu)
+    if len(result_diff) == 0:
+        raise TrialNoOverlapError(
+            "Optitrack and airpods recordings do not overlap in time; the "
+            "two files may be mismatched."
+        )
 
     return {"opti": result_opti, "imu": result_imu, "diff": result_diff}
 

@@ -3,7 +3,12 @@ import streamlit as st
 
 from data.loaders import load_metadata, load_opti, load_imu
 from data.params import Params
-from data.processing import process_trial, process_rms, SOURCES
+from data.processing import (
+    process_trial,
+    process_rms,
+    TrialProcessingError,
+    SOURCES,
+)
 
 st.set_page_config(page_title="Balance Analysis", layout="wide")
 st.title("Balance Project — Task View")
@@ -17,6 +22,7 @@ with st.sidebar:
 trials = all_trials.xs(task, level="task")
 
 trial_names = []
+skipped_trials = []
 opti_aggregate_df = []
 imu_aggregate_df = []
 diff_aggregate_df = []
@@ -26,13 +32,18 @@ for trial in trials.reset_index().itertuples():
     print(trial)
     participant = all_participants[trial.participant]
     metadata = load_metadata(participant["path"])
-    global_params = metadata.get("global", {})
 
+    if pd.isna(trial.opti_file):
+        continue  # airpods-only trials have no optitrack to compare
     df_opti = load_opti(trial.opti_file)
     df_imu = load_imu(trial.imu_file)
 
     trial_params = Params.from_dict(metadata.get(f"{task} {trial.trial_num}", {}))
-    result = process_trial(df_opti, df_imu, trial_params, global_params)
+    try:
+        result = process_trial(df_opti, df_imu, trial_params)
+    except TrialProcessingError as e:
+        skipped_trials.append(f"{task} {trial.trial_num} - {trial.participant}: {e}")
+        continue
     rms_result = process_rms(result)
 
     trial_names.append(f"{task} {trial.trial_num} - {trial.participant}")
@@ -62,3 +73,7 @@ st.subheader("Airpods RMS")
 st.dataframe(imu_aggregate_df, width="stretch")
 st.subheader("Absolute Difference RMS")
 st.dataframe(diff_aggregate_df, width="stretch")
+
+if skipped_trials:
+    with st.expander("Skipped trials (couldn't be processed)"):
+        st.caption("\n\n".join(skipped_trials))
